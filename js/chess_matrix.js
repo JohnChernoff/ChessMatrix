@@ -6,7 +6,6 @@ function getControl(x,y,matrix) {
   control += knightControl(x,y,matrix);
   control += diagControl(x,y,matrix);
   control += lineControl(x,y,matrix);
-  //console.log(x + "," + y + " -> " + control);
   return control;
 }
 
@@ -17,7 +16,7 @@ function knightControl(x1,y1,matrix) {
     if ((Math.abs(x2) + Math.abs(y2)) === 3) {
       let x = x1 + x2, y = y1 + y2;
       if (x >= 0 && x < 8 && y >= 0 && y < 8) {
-        if (matrix[x][y] === KNIGHT) control++; else if (matrix[x][y] === -KNIGHT) control--;
+        if (matrix[x][y].piece === KNIGHT) control++; else if (matrix[x][y].piece === -KNIGHT) control--;
       }
     }
   }
@@ -34,17 +33,17 @@ function diagControl(x1,y1,matrix) {
       x += dx; y += dy; //console.log("Testing: " + x + "," + y);
       clear_line = (x >= 0 && x < 8 && y >= 0 && y < 8);
       if (clear_line) {
-        if (Math.abs(matrix[x][y]) === BISHOP || Math.abs(matrix[x][y]) === QUEEN) {
-          control += matrix[x][y] < 0 ? -1 : 1;
+        if (Math.abs(matrix[x][y].piece) === BISHOP || Math.abs(matrix[x][y].piece) === QUEEN) {
+          control += matrix[x][y].piece < 0 ? -1 : 1;
         }
         else if (Math.abs(x1-x) < 2 && Math.abs(y1-y) < 2) { //adjacent
-          if (Math.abs(matrix[x][y]) === KING) {
-            control += matrix[x][y] < 0 ? -1 : 1;
+          if (Math.abs(matrix[x][y].piece) === KING) {
+            control += matrix[x][y].piece < 0 ? -1 : 1;
           }
-          else if (matrix[x][y] === PAWN && x > x1) control++;
-          else if (matrix[x][y] === -PAWN && x < x1) control--;
+          else if (matrix[x][y].piece === PAWN && x > x1) control++;
+          else if (matrix[x][y].piece === -PAWN && x < x1) control--;
         }
-        clear_line = (matrix[x][y] === EMPTY);
+        clear_line = (matrix[x][y].piece === EMPTY);
       }
     }
   }
@@ -62,15 +61,15 @@ function lineControl(x1,y1,matrix) {
           x += dx; y += dy;
           clear_line = (x >= 0 && x < 8 && y >= 0 && y < 8);
           if (clear_line) {
-            if (Math.abs(matrix[x][y]) === ROOK || Math.abs(matrix[x][y]) === QUEEN) {
-              control += matrix[x][y] < 0 ? -1 : 1;
+            if (Math.abs(matrix[x][y].piece) === ROOK || Math.abs(matrix[x][y].piece) === QUEEN) {
+              control += matrix[x][y].piece < 0 ? -1 : 1;
             }
             else if (Math.abs(x1-x) < 2 && Math.abs(y1-y) < 2) { //adjacent
-              if (Math.abs(matrix[x][y]) === KING) {
-                control += matrix[x][y] < 0 ? -1 : 1;
+              if (Math.abs(matrix[x][y].piece) === KING) {
+                control += matrix[x][y].piece < 0 ? -1 : 1;
               }
             }
-            clear_line = (matrix[x][y] === EMPTY);
+            clear_line = (matrix[x][y].piece === EMPTY);
           }
         }
       }

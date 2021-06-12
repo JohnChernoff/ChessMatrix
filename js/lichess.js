@@ -5,6 +5,7 @@ let game_list = []; game_list.length = num_games; //let game_list_tmp = [];
 let lich_sock = null;
 let queue = [];
 let msg_loop = null;
+let running = false;
 
 function initAllGames() {
   //initGames("bullet");
@@ -25,7 +26,7 @@ function initGames(type) {
             if (game_list[game_idx] === undefined || game_list[game_idx].fin) {
               console.log("At index: " + game_idx);
               game_list[game_idx] = {
-                fin : false, gid : gid, matrix : FEN2Matrix(state)
+                fin : false, gid : gid, matrix : initMatrix(state), canvas_loc : { x : 0, y : 0 }
               };
               send(lich_sock, JSON.stringify({ t: 'startWatching', d: gid }));
               break;
@@ -33,17 +34,20 @@ function initGames(type) {
           }
         }
       }
+      running = true; //resize();
     });
 }
 
 function closeSock() {
-  lich_sock.close();
+  lich_sock.close(); running = false;
 }
 
-function FEN2Matrix(fen) {
+function initMatrix(fen) {
   let matrix = [];
   for (let x=0;x<8;x++) {
-    matrix[x] = []; for (let y=0;y<8;y++) matrix[x][y] = 0;
+    matrix[x] = []; for (let y=0;y<8;y++) {
+      matrix[x][y] = { piece: 0, color: [0,0,0], control: 0 };
+    }
   }
   let ranks = fen.split(" ")[0].split("/");
   for (let rank = 0; rank < ranks.length; rank++) {
@@ -51,7 +55,7 @@ function FEN2Matrix(fen) {
     for (let i = 0; i < ranks[rank].length; i++) {
       let char = ranks[rank].charAt(i);
       let piece = piece_chars.indexOf(char);
-      if (piece === -1) file += parseInt(char); else matrix[rank][file++] = piece - 6;
+      if (piece === -1) file += parseInt(char); else matrix[rank][file++].piece = piece - 6;
     }
   }
   return matrix;
@@ -93,7 +97,8 @@ function runLichessSocket() {
         let i = getGame(data.d.id);
         if (i > NO_GAME) {
           if (data.t === "fen") {
-            game_list[i].matrix = FEN2Matrix(data.d.fen); drawBoard(i);
+            game_list[i].matrix = initMatrix(data.d.fen);
+            if (i < num_games) drawBoard(game_list[i]);
           }
           else if (data.t === "finish") {
             console.log("Game finished: " + game_list[1].gid);
@@ -115,20 +120,7 @@ function runLichessSocket() {
 
 }
 
-/*
-function copyGames(list1, list2) {
-  for (let i = 0; i < list1.length; i++) {
-    let mat = [];
-    for (let x = 0; x < list1.matrix.length; x++) {
-      for (let y = 0; y < list1.matrix[x].length; y++) {
-        mat[x][y] = list1.matrix[x][y];
-      }
-    }
-    list2[i] = { fin : list1.fin, gid : list1.gid, matrix: mat }
-  }
-}
-
 function dumpGames() {
   for (let i=0;i<game_list.length;i++) if (game_list[i] !== undefined) console.log(i + ": " + game_list[i].gid);
 }
- */
+
