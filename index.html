@@ -25,22 +25,26 @@
 <body onload="resize()" onresize="resize()">
 
   <!-- Add your site or application content here -->
-  <button type="button" id="sockButt" onclick="toggleStart()" > Start </button>
-  <label for="selectScheme">Color Scheme</label>
-  <select id="selectScheme" onchange="drawBoard()">
-    <option value="1">Blue/Red</option>
-    <option value="2">Multi-hue</option>
-    <option value="3">Monochrome</option>
-  </select>
-  <label for="chkShade">Shading</label>
-  <input type="checkbox" id="chkShade" onchange="drawBoard()">
-  <label for="range_shade">Shade factor</label>
-  <input type="range" min="1" max="12" value="2" step=".25" class="slider" id="range_shade" onchange="drawBoard()">
-  <label for="chkPieces">Show Pieces</label>
-  <input type="checkbox" id="chkPieces" onchange="drawBoard()">
-  <label for="chkControl">Show Control</label>
-  <input type="checkbox" id="chkControl" onchange="drawBoard()">
-  <canvas id="main_canvas"></canvas>
+  <div id="sidebar">
+    <button type="button" id="sockButt" onclick="toggleStart()" > Start </button>
+    <label for="selectScheme">Color Scheme</label>
+    <select id="selectScheme" onchange="drawBoard()">
+      <option value="COLOR_SCHEME_BLUE_RED">Blue/Red</option>
+      <option value="COLOR_SCHEME_MULTI_HUE">Multi-hue</option>
+      <option value="COLOR_SCHEME_MONO">Monochrome</option>
+    </select>
+    <label for="chkShade">Shading</label>
+    <input type="checkbox" id="chkShade" onchange="drawBoard()">
+    <label for="range_games">Games</label>
+    <input type="range" min="1" max="15" value="15" step="1" class="slider" id="range_games" onchange="drawBoard()">
+    <label for="chkPieces">Show Pieces</label>
+    <input type="checkbox" id="chkPieces" onchange="drawBoard()">
+    <label for="chkControl">Show Control</label>
+    <input type="checkbox" id="chkControl" onchange="drawBoard()">
+  </div>
+  <div id="boards">
+    <canvas id="main_canvas"></canvas>
+  </div>
 
   <script src="js/vendor/modernizr-3.11.2.min.js"></script>
   <script src="js/plugins.js"></script>

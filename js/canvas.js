@@ -1,79 +1,91 @@
-const SKY_WIDTH = 1000, SKY_HEIGHT = 1000;
-const COLOR_SCHEME_BLUE_RED = '1', COLOR_SCHEME_MULTI_HUE = '2', COLOR_SCHEME_MONO = '3';
-let range_shade = document.getElementById("range_shade");
+let range_games = document.getElementById("range_games");
 let chk_shade = document.getElementById("chkShade");
 let chk_pieces = document.getElementById("chkPieces");
 let chk_control = document.getElementById("chkControl");
 let select_scheme = document.getElementById("selectScheme");
 let canvas = document.getElementById("main_canvas");
 let ctx = canvas.getContext("2d");
+let board_size;
+let board_loc = [];
 
 function resize() {
-  canvas.style.height = (window.innerHeight - 36) + "px";
-  canvas.style.width = (window.innerWidth - 16) + "px";
-  canvas.width = SKY_WIDTH;
-  canvas.height = SKY_HEIGHT;
+  canvas.height = window.innerHeight - 36;
+  canvas.style.height = canvas.height + "px";
+  canvas.width = window.innerWidth - 16;
+  canvas.style.width = canvas.width + "px";
   ctx.fillStyle = 'black';
-  ctx.fillRect(0,0,SKY_WIDTH,SKY_HEIGHT);
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  console.log("Resizing to: " + canvas.width + "," + canvas.height);
+}
+
+function fitBoardsToScreen() {
+  num_games = range_games.valueAsNumber; console.log("Games: " + num_games);
+  board_loc = [num_games];
+  let n = Math.floor(Math.sqrt(num_games));
+  let board = 0;
+  let long_length = canvas.width > canvas.height ? canvas.width : canvas.height;
+  let short_length = canvas.width > canvas.height ? canvas.height : canvas.width;
+  let rows = n;
+  let max_cols = Math.floor(num_games/rows);
+  board_size = Math.floor(Math.min(long_length/max_cols,short_length/rows));
+  for (let row = 0; row < rows; row++) {
+    let cols = Math.floor(long_length / board_size);
+    let padding = long_length / cols;
+    for (let i = 0; i<cols; i++) {
+      if (canvas.width > canvas.height) board_loc[board] = { x: padding * i , y: board_size * row };
+      else board_loc[board] = { y: board_size * row , x: padding * i };
+      if (++board >= num_games) return;
+    }
+  }
 }
 
 function drawBoard(game_index) {
-  let cols = 5; let rows = Math.floor(game_list.length / cols);
-  let xv = SKY_WIDTH/cols; let yv = SKY_HEIGHT/rows;
-  let square_width = xv / 8; let square_height = yv / 8;
-  let i = 0;
-  for (let y=0; y<rows; y++) {
-    for (let x=0; x<cols; x++) {
-      let px = x * xv; let py = y * yv;
-      if (game_index === undefined || i === game_index) {
-        if (game_list[i] !== undefined) {
-          if (chk_shade.checked) {
-            linearInterpolateBoard(game_list[i].matrix,Math.floor(square_width),Math.floor(square_height),px,py);
-            return;
-          }
-          for (let rank = 0; rank < 8; rank++) {
-            for (let file = 0; file < 8; file++) {
-              let squareX = px + (file * square_width), squareY = py + (rank * square_height);
-              let control = getControl(rank,file,game_list[i].matrix);
+  if (game_index === undefined) resize();
+  fitBoardsToScreen();
+  let square_width = Math.floor(board_size / 8), square_height = Math.floor(board_size / 8);
 
-              if (chk_shade.checked) {
-                drawSquare(game_list[i].matrix,file,rank,squareX,squareY,square_width,square_height,control);
-              }
-              else {
-                ctx.fillStyle = getColor(game_list[i].matrix[rank][file],control);
-                ctx.fillRect(squareX,squareY,square_width,square_height);
-              }
-
-              if (chk_pieces.checked) {
-                if (game_list[i].matrix[rank][file] > 0 ) ctx.fillStyle = "blue";
-                else if (game_list[i].matrix[rank][file] < 0 ) ctx.fillStyle = "orange";
-                else ctx.fillStyle = "green";
-                ctx.fillText(piece_chars.charAt(Math.abs(game_list[i].matrix[rank][file])+6),
-                  squareX + square_width/2 ,squareY + square_height/4);
-              }
-
-              if (chk_control.checked) {
-                ctx.fillStyle = "yellow";
-                ctx.fillText(""+ control,squareX + square_width/2 ,squareY + square_height/1.5);
-              }
-
-              ctx.strokeStyle = "rgb(24,24,24)"; ctx.strokeRect(px,py,xv,yv);
+  for (let i=0; i<board_loc.length; i++) {
+    if (game_index === undefined || (i === game_index && i < num_games)) {
+      if (game_list[i] !== undefined) {
+        if (chk_shade.checked) {
+          linearInterpolateBoard(game_list[i].matrix,square_width,square_height,board_loc[i].x,board_loc[i].y);
+        }
+        for (let rank = 0; rank < 8; rank++) {
+          for (let file = 0; file < 8; file++) {
+            let squareX = board_loc[i].x + (file * square_width), squareY = board_loc[i].y + (rank * square_height);
+            let control = getControl(rank, file, game_list[i].matrix);
+            if (chk_shade.checked) {
+              //shadeSquare(game_list[i].matrix, file, rank, squareX, squareY, square_width, square_height, control);
+            }
+            else {
+              ctx.fillStyle = getColor(game_list[i].matrix[rank][file], control);
+              ctx.fillRect(squareX, squareY, square_width, square_height);
+            }
+            if (chk_pieces.checked) {
+              if (game_list[i].matrix[rank][file] > 0 ) ctx.fillStyle = "cyan";
+              else if (game_list[i].matrix[rank][file] < 0 ) ctx.fillStyle = "orange";
+              else ctx.fillStyle = "green";
+              ctx.fillText(piece_chars.charAt(Math.abs(game_list[i].matrix[rank][file])+6),
+                squareX + square_width/2 ,squareY + square_height/4);
+            }
+            if (chk_control.checked) {
+              ctx.fillStyle = "yellow";
+              ctx.fillText(""+ control,squareX + square_width/2 ,squareY + square_height/1.5);
             }
           }
         }
+        ctx.strokeStyle = "rgb(24,24,24)"; ctx.strokeRect(board_loc[i].x,board_loc[i].y,board_size,board_size);
       }
-      else {
-        ctx.strokeStyle = game_list[i] === undefined ? "blue" : (game_list[i].fin ? "white" : rgb(24,24,24));
-        ctx.strokeRect(px,py,xv,yv);
-      }
-      i++;
+    }
+    else {
+      ctx.strokeStyle = game_list[i] === undefined ? "blue" : (game_list[i].fin ? "white" : rgb(24,24,24));
+      ctx.strokeRect(board_loc[i].x,board_loc[i].y,board_size,board_size);
     }
   }
 }
 
 function linearInterpolateBoard(matrix,square_width,square_height,offX,offY) {
   let board_width = square_width * 8, board_height = square_height * 8;
-
   let pixArray = [];
   for (let h=0; h < (square_height * 8); h++) {
     pixArray[h] = [];
@@ -93,36 +105,25 @@ function linearInterpolateBoard(matrix,square_width,square_height,offX,offY) {
     //console.log("colors: " + c1 + "," + c2 + "," + c3 + "," + c4);
     for (let i = 0; i < 3; i++) {
       for (let x1 = 0; x1 < square_width; x1++) {
-
         let v = x1/square_width;
         let ly = y + square_height;
         let x2 = x+x1;
-
-
         //interpolate right
         pixArray[y][x2][i] = Math.floor(lerp(v,c1[i],c2[i]));
         //console.log("x/y: " + x +"," + y + ", x1: " + x1 + ", v:" + v);
         //console.log(i + " upper pixel value: " + pixArray[x+x1][y][i] + ", " + c1[i] + " -> " + c2[i]);
         //interpolate right and below
         pixArray[ly][x2][i] = Math.floor(lerp(v,c3[i],c4[i]));
-
         //console.log(i + " lower pixel value: " + pixArray[x+x1][ly][i] + ", " + c3[i] + " -> " + c4[i]);
         //interpolate down
         //console.log("y:" + y + " -> " + ly);
         for (let y1 = 0; y1 < square_height; y1++) {
-          v = y1/square_height;
-          let y2 = y + y1;
-          //console.log("current y:" + y2);
-          pixArray[y2][x2][i] = Math.floor(lerp(v,pixArray[y][x2][i],pixArray[ly][x2][i]));
+          pixArray[y + y1][x2][i] = Math.floor(lerp(y1/square_height,pixArray[y][x2][i],pixArray[ly][x2][i]));
         }
       }
     }
   }
-
-
-
   let img_data = ctx.createImageData(board_width,board_height);
-
   let pixels = img_data.data;
   for (let px = 0; px < board_height; px++) {
     for (let py = 0; py < board_width; py++) {
@@ -134,14 +135,13 @@ function linearInterpolateBoard(matrix,square_width,square_height,offX,offY) {
     }
   }
   ctx.putImageData(img_data,offX,offY);
-
 }
 
 function lerp(v, start, end) {
   return (1 - v) * start + v * end;
 }
 
-function drawSquare(matrix,file,rank,squareX,squareY,square_width,square_height,control) {
+function shadeSquare(matrix,file,rank,squareX,squareY,square_width,square_height,control) {
   let w2 = square_width/2, h2 = square_height/2;
   let x1 = file * square_width, y1 = rank * square_height;
   let img_data = ctx.createImageData(square_width,square_height);
@@ -161,7 +161,6 @@ function drawSquare(matrix,file,rank,squareX,squareY,square_width,square_height,
 }
 
 function calcColor(matrix,x,y,file,rank,square_width,square_height,w2,h2,control) {
-
   let x2,y2;
   let neighbours = [];
   for (let my = rank - 1; my <= rank + 1; my++) {
@@ -174,19 +173,8 @@ function calcColor(matrix,x,y,file,rank,square_width,square_height,w2,h2,control
       }
     }
   }
-
   neighbours.sort(function compare(a,b) { return a.distance - b.distance; });
-  //for (let i=0; i< neighbours.length; i++) { console.log("Neighbour #" + i + ": " + neighbours[i].distance); }
   let weights = 0, red_sum = 0, green_sum = 0, blue_sum = 0;
-
-  /*
-  for (let n=0; n<4; n++) for (let i=0; i< (1/neighbours[n].distance) * 1000; i++) {
-    red_sum += (neighbours[n].color[0]);
-    green_sum += (neighbours[n].color[1]);
-    blue_sum += (neighbours[n].color[2]);
-    weights++;
-  }*/
-
   for (let i=0; i<4; i++) {
     let d = 1/neighbours[i].distance;
     red_sum += (neighbours[i].color[0] * d);
@@ -194,17 +182,14 @@ function calcColor(matrix,x,y,file,rank,square_width,square_height,w2,h2,control
     blue_sum += (neighbours[i].color[2] * d);
     weights += d;
   }
-
-  let color = rgb((red_sum/weights),(green_sum/weights),(blue_sum/weights));
-  //console.log("calculating color for: " + x + "," + y + " -> " + color);
-  return color;
+  return rgb((red_sum/weights),(green_sum/weights),(blue_sum/weights));
 }
 
 function getColor(p,control) { //console.log("Scheme: " + select_scheme.value);
   switch (select_scheme.value) {
-    case COLOR_SCHEME_BLUE_RED: return getRedBlueColor(p,control);
-    case COLOR_SCHEME_MULTI_HUE: return getMultiHueColor(p,control);
-    case COLOR_SCHEME_MONO: return getGrayscale(control);
+    case 'COLOR_SCHEME_BLUE_RED': return getRedBlueColor(p,control);
+    case 'COLOR_SCHEME_MULTI_HUE': return getMultiHueColor(p,control);
+    case 'COLOR_SCHEME_MONO': return getGrayscale(control);
   }
 }
 

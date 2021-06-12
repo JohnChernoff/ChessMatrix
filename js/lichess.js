@@ -1,14 +1,15 @@
 const NO_GAME = -1; //const FEN_SUFFIX = " - - 1 1";
 let piece_chars = "kqrbnp-PNBRQK";
-let game_list = []; game_list.length = 15; //let game_list_tmp = [];
+let num_games = 15;
+let game_list = []; game_list.length = num_games; //let game_list_tmp = [];
 let lich_sock = null;
 let queue = [];
 let msg_loop = null;
 
 function initAllGames() {
   //initGames("bullet");
-  //initGames("blitz");
-  initGames("rapid");
+  initGames("blitz");
+  //initGames("rapid");
 }
 
 function initGames(type) {
