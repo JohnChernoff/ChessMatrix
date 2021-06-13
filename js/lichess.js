@@ -8,13 +8,13 @@ let msg_loop = null;
 let running = false;
 
 function initAllGames() {
-  //initGames("bullet");
-  initGames("blitz");
-  //initGames("rapid");
+  if (num_games > 0) initGames("blitz");
+  if (num_games > 15) initGames("bullet");
+  if (num_games > 30) initGames("rapid");
 }
 
 function initGames(type) {
-  fetch("http://localhost:5000/games/" + type,{ headers:{'Accept':'application/json'}})
+  fetch("http://chernovia.com:5000/games/" + type,{ headers:{'Accept':'application/json'}})
     .then(response => response.text())
     .then(text => JSON.parse(text))
     .then(json => { //console.log("JSON: " + json);
@@ -26,7 +26,7 @@ function initGames(type) {
             if (game_list[game_idx] === undefined || game_list[game_idx].fin) {
               console.log("At index: " + game_idx);
               game_list[game_idx] = {
-                fin : false, gid : gid, matrix : initMatrix(state), canvas_loc : { x : 0, y : 0 }
+                fin : false, gid : gid, matrix : initMatrix(state), canvas_loc : { x : 0, y : 0 }, last_move : ""
               };
               send(lich_sock, JSON.stringify({ t: 'startWatching', d: gid }));
               break;
@@ -97,7 +97,9 @@ function runLichessSocket() {
         let i = getGame(data.d.id);
         if (i > NO_GAME) {
           if (data.t === "fen") {
+            //console.log(data);
             game_list[i].matrix = initMatrix(data.d.fen);
+            game_list[i].last_move = data.d.lm;
             if (i < num_games) drawBoard(game_list[i]);
           }
           else if (data.t === "finish") {

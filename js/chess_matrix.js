@@ -76,7 +76,3 @@ function lineControl(x1,y1,matrix) {
     }
   return control;
 }
-
-function getAlgebraic(x,y) {
-  return String.fromCharCode(('a'.charCodeAt(0) + x)) + "" + (y+1);
-}

@@ -30,15 +30,19 @@
     <label for="selectScheme">Color Scheme</label>
     <select id="selectScheme" onchange="drawBoards()">
       <option value="COLOR_SCHEME_BLUE_RED">Blue/Red</option>
-      <option value="COLOR_SCHEME_MULTI_HUE">Multi-hue</option>
+      <option value="COLOR_SCHEME_BLUE_RED2">Blue/Red Multi-hue</option>
+      <option value="COLOR_SCHEME_GREEN_RED">Green/Red</option>
+      <option value="COLOR_SCHEME_GREEN_RED2">Green/Red Multi-hue</option>
+      <option value="COLOR_SCHEME_BLUE_GREEN">Blue/Green</option>
+      <option value="COLOR_SCHEME_BLUE_GREEN2">Blue/Green Multi-hue</option>
       <option value="COLOR_SCHEME_MONO">Monochrome</option>
     </select>
     <label for="chkShade">Shading</label>
-    <input type="checkbox" id="chkShade" onchange="drawBoards()">
+    <input type="checkbox" id="chkShade" onchange="drawBoards()" checked="true">
     <label for="range_games">Games</label>
     <input type="range" min="1" max="15" value="8" step="1" class="slider" id="range_games" onchange="drawBoards()">
     <label for="chkPieces">Show Pieces</label>
-    <input type="checkbox" id="chkPieces" onchange="drawBoards()">
+    <input type="checkbox" id="chkPieces" onchange="drawBoards()" checked="true">
     <label for="chkControl">Show Control</label>
     <input type="checkbox" id="chkControl" onchange="drawBoards()">
   </div>

@@ -1,3 +1,4 @@
+const RED = 0, GREEN = 1, BLUE = 2;
 let range_games = document.getElementById("range_games");
 let chk_shade = document.getElementById("chkShade");
 let chk_pieces = document.getElementById("chkPieces");
@@ -63,6 +64,7 @@ function drawBoard(board) {
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       let squareX = board.canvas_loc.x + (file * square_width), squareY = board.canvas_loc.y + (rank * square_height);
+
       if (!chk_shade.checked) {
         ctx.fillStyle = board.matrix[rank][file].color;
         ctx.fillRect(squareX, squareY, square_width, square_height);
@@ -81,9 +83,44 @@ function drawBoard(board) {
         ctx.fillText(""+ board.matrix[rank][file].control,squareX + square_width/2 ,squareY + square_height/1.5);
       }
 
-      ctx.strokeStyle = "rgb(24,24,24)"; ctx.strokeRect(board.canvas_loc.x,board.canvas_loc.y,board_size,board_size);
     }
   }
+  ctx.strokeStyle = "rgb(24,24,24)"; ctx.strokeRect(board.canvas_loc.x,board.canvas_loc.y,board_size,board_size);
+
+  let move = getMoveCoords(board.last_move);
+  //console.log(move);
+  if (move !== null) {
+    let x1 = board.canvas_loc.x + (move.from.x * square_width) + (square_width/2), y1 = board.canvas_loc.y + (move.from.y * square_height) + (square_height/2);
+    let x2 = board.canvas_loc.x + (move.to.x * square_width) + (square_width/2), y2 = board.canvas_loc.y + (move.to.y * square_height) + (square_height/2);
+    ctx.strokeStyle = "white";
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+    ctx.stroke(); ctx.closePath();
+    ctx.beginPath();
+    ctx.arc(x1,y1,8,0,Math.PI * 2,false);
+    ctx.stroke();
+    drawArrowhead(ctx,{x: x1, y: y1}, {x: x2, y: y2},8);
+  }
+
+}
+
+function getAlgebraic(x,y) {
+  return String.fromCharCode(('a'.charCodeAt(0) + x)) + "" + (y+1);
+}
+
+function getMoveCoords(move) {
+  if (move !== "O-O" && move !== "O-O-O") {
+    return {
+      from: {
+        x: move.charCodeAt(0) - 'a'.charCodeAt(0), y: 8 - (move.charCodeAt(1) - '0'.charCodeAt(0))
+      },
+      to: {
+        x: move.charCodeAt(2) - 'a'.charCodeAt(0), y: 8 - (move.charCodeAt(3) - '0'.charCodeAt(0))
+      }
+    }
+  }
+  else return null;
 }
 
 function inBounds(x,y) { return (x >= 0 && y >= 0 && x < 8 && y < 8); }
@@ -151,30 +188,49 @@ function lerp(v, start, end) {
 
 function getColor(square) { //console.log("Scheme: " + select_scheme.value);
   switch (select_scheme.value) {
-    case 'COLOR_SCHEME_BLUE_RED': return getRedBlueColor(square);
-    case 'COLOR_SCHEME_MULTI_HUE': return getMultiHueColor(square);
+    case 'COLOR_SCHEME_BLUE_RED': return getTwoColor(square,RED,GREEN,BLUE);
+    case 'COLOR_SCHEME_BLUE_RED2': return getTriColor(square,RED,GREEN,BLUE);
+    case 'COLOR_SCHEME_GREEN_RED': return getTwoColor(square,RED,BLUE,GREEN);
+    case 'COLOR_SCHEME_GREEN_RED2': return getTriColor(square,RED,BLUE,GREEN);
+    case 'COLOR_SCHEME_BLUE_GREEN': return getTwoColor(square,GREEN,RED,BLUE);
+    case 'COLOR_SCHEME_BLUE_GREEN2': return getTriColor(square,GREEN,RED,BLUE);
     case 'COLOR_SCHEME_MONO': return getGrayscale(square);
   }
 }
 
-function getRedBlueColor(square) {
-  let control_grad = 128 / MAX_CONTROL;
+function getTwoColor(square,blackColor,voidColor,whiteColor) {
+  let color_matrix = [];
+  let control_grad = 256 / MAX_CONTROL;
   let c = square.control * control_grad;
-  if (square.piece < 0) return rgb(128 - c,0,0);
-  else if (square.piece > 0)  return rgb(0,0,128 + c);
-  else {
-    if (c < 0) return rgb(-c,0,0); else return rgb(0,0,c);
+  if (c < 0) {
+    color_matrix[blackColor] = Math.abs(c); color_matrix[voidColor] = 0; color_matrix[whiteColor] = 0;
   }
+  else {
+    color_matrix[blackColor] = 0; color_matrix[voidColor] = 0; color_matrix[whiteColor] = Math.abs(c);
+  }
+  return rgb(color_matrix[0],color_matrix[1],color_matrix[2]);
 }
 
-function getMultiHueColor(square) {
-  let control_grad = 128 / MAX_CONTROL;
-  let g = (square.control === undefined ? 32 : 128 + (square.control * control_grad));
+function getTriColor(square,blackColor,voidColor,whiteColor) {
+  let color_matrix = [];
+  let control_grad = 256 / MAX_CONTROL;
+  let c = square.control * control_grad;
   let piece_grad = 128/6;
-  let c = 128 + (Math.abs(square.piece) * piece_grad);
-  if (square.piece < 0) return rgb(c,g,0);
-  else if (square.piece > 0) return rgb(0,g,c);
-  else return rgb(0,g,0);
+  let pc = 128 + (piece_grad * square.piece);
+
+  if (square.piece < 0) {
+    color_matrix[blackColor] = Math.abs(c); color_matrix[voidColor] = pc; color_matrix[whiteColor] = 0;
+  }
+  else if (square.piece > 0) {
+    color_matrix[blackColor] = 0; color_matrix[voidColor] = pc; color_matrix[whiteColor] = Math.abs(c);
+  }
+  else if (c < 0) {
+    color_matrix[blackColor] = Math.abs(c); color_matrix[voidColor] = 0; color_matrix[whiteColor] = 0;
+  }
+  else {
+    color_matrix[blackColor] = 0; color_matrix[voidColor] = 0; color_matrix[whiteColor] =  Math.abs(c);
+  }
+  return rgb(color_matrix[0],color_matrix[1],color_matrix[2]);
 }
 
 function getGrayscale(square) {
@@ -191,4 +247,31 @@ function rgb(r, g, b){
 
 function rgb2array(rgb) {
   return rgb.match(/\d+/g);
+}
+
+//thanks to www.jwir3.com for this snippet
+function drawArrowhead(context, from, to, radius) {
+  let x_center = to.x;
+  let y_center = to.y;
+  let angle, x, y;
+
+  context.beginPath();
+
+  angle = Math.atan2(to.y - from.y, to.x - from.x)
+  x = radius * Math.cos(angle) + x_center;
+  y = radius * Math.sin(angle) + y_center;
+
+  context.moveTo(x, y);
+
+  angle += (1.0/3.0) * (2 * Math.PI);
+  x = radius * Math.cos(angle) + x_center;
+  y = radius * Math.sin(angle) + y_center;
+
+  context.lineTo(x, y);
+
+  angle += (1.0/3.0) * (2 * Math.PI);
+  x = radius * Math.cos(angle) + x_center;
+  y = radius * Math.sin(angle) + y_center;
+
+  context.lineTo(x, y); context.closePath(); context.fill();
 }
