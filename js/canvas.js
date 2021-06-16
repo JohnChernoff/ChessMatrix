@@ -6,10 +6,29 @@ let chk_control = document.getElementById("chkControl");
 let select_scheme = document.getElementById("selectScheme");
 let canvas = document.getElementById("main_canvas");
 let ctx = canvas.getContext("2d");
-let board_size;
+let obs_board_size, play_board_size;
 let edge_col = [0,0,0];
 let unfitted = true;
 let piece_imgs = [];
+let background_color = "black";
+let from_click = null, to_click = null;
+
+canvas.addEventListener("mousedown", event => {
+  let click_square = getAlgebraic(
+    Math.floor(8 / (play_board_size/event.pageX)), 7 - Math.floor(8 / (play_board_size/event.pageY)));
+
+  if (from_click === null) from_click = click_square;
+  else {
+    to_click = click_square;
+    if (playing) {
+      makeMove(from_click+to_click);
+      from_click = to_click = null;
+    }
+  }
+  //console.log(fromClick);
+});
+
+
 
 for (let i=0; i<6; i++) {
   piece_imgs[i] = { black: new Image(), white: new Image() }; //onload?
@@ -22,27 +41,31 @@ function resize() {
   canvas.style.height = canvas.height + "px";
   canvas.width = window.innerWidth - 16;
   canvas.style.width = canvas.width + "px";
-  ctx.fillStyle = 'black';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  console.log("Resizing to: " + canvas.width + "," + canvas.height);
+  play_board_size = Math.min(canvas.width,canvas.height);
+  clearScreen(); console.log("Resizing to: " + canvas.width + "," + canvas.height);
   if (running) fitBoardsToScreen();
+}
+
+function clearScreen() {
+  ctx.fillStyle = background_color;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
 }
 
 function fitBoardsToScreen() {
   num_games = range_games.valueAsNumber; //console.log("Games: " + num_games);
   let n = Math.floor(Math.sqrt(num_games));
   let board_num = 0;
-  let long_length = canvas.width > canvas.height ? canvas.width : canvas.height;
+  let long_length = canvas.width > canvas.height ? canvas.width : canvas.height; //TODO: use Math.min,max
   let short_length = canvas.width > canvas.height ? canvas.height : canvas.width;
   let rows = n;
   let max_cols = num_games/rows;
-  board_size = Math.floor(Math.min(long_length/max_cols,short_length/rows));
+  obs_board_size = Math.floor(Math.min(long_length/max_cols,short_length/rows));
   for (let row = 0; row < rows; row++) {
-    let cols = Math.floor(long_length / board_size);
+    let cols = Math.floor(long_length / obs_board_size);
     let padding = long_length / cols;
     for (let i = 0; i<cols; i++) {
-      if (canvas.width > canvas.height) game_list[board_num].canvas_loc = { x: padding * i , y: board_size * row };
-      else game_list[board_num].canvas_loc = { y: board_size * row , x: padding * i };
+      if (canvas.width > canvas.height) game_list[board_num].canvas_loc = { x: padding * i , y: obs_board_size * row };
+      else game_list[board_num].canvas_loc = { y: obs_board_size * row , x: padding * i };
       if (++board_num >= num_games) return;
     }
   }
@@ -51,13 +74,14 @@ function fitBoardsToScreen() {
 
 function drawBoards() {
   if (running) {
-    resize();
+    clearScreen();
     for (let i=0; i<num_games; i++) drawBoard(game_list[i]);
   }
 }
 
 function drawBoard(board) {
-  if (unfitted) fitBoardsToScreen();
+  if (playing) { board.canvas_loc.x = 0; board.canvas_loc.x = 0; } else if (unfitted) fitBoardsToScreen();
+  let board_size = playing ? play_board_size : obs_board_size;
   let square_width = Math.floor(board_size / 8), square_height = Math.floor(board_size / 8);
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
