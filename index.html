@@ -27,7 +27,7 @@
   <!-- Add your site or application content here -->
   <div id="sidebar">
     <button id = "logButt"  onclick="location.href='http://chernovia.com:8087/auth';" > Lichess Login </button>
-    <button id = "sockButt" onclick="toggleStart()" > Start </button>
+    <button id="playButt" onclick="showSeekOptions()">Play</button>
     <label for="selectScheme">Color Scheme</label>
     <select id="selectScheme" onchange="drawBoards()">
       <option value="COLOR_SCHEME_BLUE_RED">Blue/Red</option>
@@ -46,8 +46,9 @@
     <input type="checkbox" id="chkPieces" onchange="drawBoards()" checked="true">
     <label for="chkControl">Show Control</label>
     <input type="checkbox" id="chkControl" onchange="drawBoards()">
+    <br><br>
   </div>
-  <button id="playButt" onclick="showSeekOptions()">Play</button>
+
   <div id="boards">
     <canvas id="main_canvas"></canvas>
   </div>

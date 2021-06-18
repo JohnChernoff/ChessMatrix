@@ -1,18 +1,17 @@
 const NO_GAME = -1; //const FEN_SUFFIX = " - - 1 1";
 let piece_chars = "kqrbnp-PNBRQK";
 let num_games = 15;
-let game_list = []; game_list.length = num_games; //let game_list_tmp = [];
+let game_list = []; game_list.length = num_games;
 let play_game;
 let lich_sock = null;
 let queue = [];
 let msg_loop = null;
-let running = false;
 let oauth;
 let port = 8087;
-let proxyAddress = "http://chernovia.com";
-//let proxyAddress = "http://localhost";
+let proxyAddress = "http://chernovia.com"; //let proxyAddress = "http://localhost";
 let seek_controller, seek_signal;
-let streaming = false;
+let logged_in = false;
+let observing = false;
 let playing = false;
 
 function setOauth() {
@@ -26,14 +25,14 @@ function setOauth() {
     oauth = getCookie("oauth");
   }
   if (oauth.length > 0) {
+    logged_in = true;
     console.log("Getting events...");
-    streaming = true;
     getEvents();
   }
   else console.log("Bad oauth, augh");
 }
 
-function initAllGames() {
+function initAllGames() { //clearScreen();
   if (num_games > 0) initGames("blitz");
   if (num_games > 15) initGames("bullet");
   if (num_games > 30) initGames("rapid");
@@ -43,29 +42,42 @@ function initGames(type) {
   fetch(proxyAddress + ":" + port + "/games/" + type,{ headers:{'Accept':'application/json'}})
     .then(response => response.text())
     .then(text => JSON.parse(text))
-    .then(json => { //console.log("JSON: " + json);
+    .then(json => { //console.log("JSON: " + JSON.stringify(json));
       for (let i = 0; i<json.gids.length; i++) {
         let gid = json.gids[i], state = json.states[i]; //console.log("Init State: " + state);
-        if (gid !== null && getGame(gid) === NO_GAME) {
-          console.log("Adding: " + gid);
+        if (gid !== null && getObservedGame(gid) === NO_GAME) {
+          //console.log("Adding: " + gid);
           for (let game_idx = 0; game_idx < game_list.length; game_idx++) {
             if (game_list[game_idx] === undefined || game_list[game_idx].fin) {
-              console.log("At index: " + game_idx);
-              game_list[game_idx] = newGame(gid,state);
+              console.log("Adding " + gid + " at index: " + game_idx);
+              game_list[game_idx] = newGame(gid,state,false);
+              board_queue.push(snapshot(game_list[game_idx]));
               startWatching(gid);
               break;
             }
           }
         }
       }
-      running = true; //resize();
+      observing = true; //resize();
     });
 }
 
-function newGame(gid,state) {
-  return {
-    fin : false, gid : gid, matrix : initMatrix(state), canvas_loc : { x : 0, y : 0 }, last_move : ""
+function newGame(gid,fen,playing) {
+  let game = {
+    playing : playing,
+    fin : false, gid : gid, matrix : initMatrix(fen), canvas_loc : { x : 0, y : 0 }, last_move : "", clock : { white: 0, black: 0 }, winner : null, info : null
   };
+
+  fetch("https://lichess.org/game/export/" + gid + "?moves=false&pgnInJson=true&clocks=false&evals=false&opening=false",
+    {
+      headers:{'Accept':'application/json'}
+    }).then(response => response.text()).then(text => JSON.parse(text)).then(json => { game.info = json; });
+
+  return game;
+}
+
+function snapshot(board) {
+  return JSON.parse(JSON.stringify(board));
 }
 
 function startWatching(gid) {
@@ -73,7 +85,7 @@ function startWatching(gid) {
 }
 
 function closeSock() {
-  lich_sock.close(); running = false;
+  lich_sock.close(); observing = false;
 }
 
 function initMatrix(fen) {
@@ -96,7 +108,7 @@ function initMatrix(fen) {
   return matrix;
 }
 
-function getGame(gid) { //if (game_list === undefined) return null;
+function getObservedGame(gid) {
   for (let i=0;i<game_list.length;i++) if (game_list[i] !== undefined && game_list[i].gid === gid) return i;
   return NO_GAME;
 }
@@ -112,22 +124,31 @@ function toggleStart() {
 function updateGame(board,game_data,draw) {
   board.matrix = initMatrix(game_data.fen);
   board.last_move = game_data.lm;
-  if (draw) drawBoard(board);
+  board.clock = { white : game_data.wc, black : game_data.bc };
+  if (draw) board_queue.push(snapshot(board));
 }
 
-function runLichessSocket() {
+function gameOver(data,board) { //console.log("Winner: " + JSON.stringify(data));
+  switch (data.d.win) {
+    case "w": board.winner = board.info.players.white.user.id; break;
+    case "b": board.winner = board.info.players.black.user.id; break;
+    case "null": board.winner = "draw/abort"; break;
+    default:  board.winner = "???";
+  }
+  board_queue.push(board);
+}
 
-  document.getElementById("sockButt").innerText = "Stop";
+function runLichessSocket() { //document.getElementById("sockButt").innerText = "Stop";
   lich_sock = new WebSocket('wss://socket.lichess.org/api/socket',[]);
 
   lich_sock.onopen = function () {
-    console.log("Connected to Lichess...");
-    //send(lich_sock,JSON.stringify({t: 'poolIn', d: '1'}));
+    console.log("Connected to Lichess..."); //send(lich_sock,JSON.stringify({t: 'poolIn', d: '1'}));
     initAllGames();
     queue = [];
     msg_loop = setInterval(function() {
       if (lich_sock.readyState === 1 && queue.length > 0) lich_sock.send(queue.pop());
-    },1000);
+      else lich_sock.send(" t : 0, p : 0 }");
+    },2000);
   }
 
   lich_sock.onerror = function (error) { console.error("Oops: " + error); }
@@ -135,30 +156,28 @@ function runLichessSocket() {
   lich_sock.onmessage = function (e) { //console.log(("Message: ") + e.data);
     let data = JSON.parse(e.data);
     if (data.t) { //console.log(data);
-      if (data.d.id) {
-        if (playing) { if (play_game.gid === data.d.id) updateGame(play_game,data.d,true); }
+      if (data.d.id) { //console.log(data);
+        if (playing) {
+          if (play_game.gid === data.d.id) {
+            if (data.t === "fen") updateGame(play_game,data.d,true);
+            else if (data.t === "finish") gameOver(data,play_game);
+          }
+        }
         else {
-          let i = getGame(data.d.id);
+          let i = getObservedGame(data.d.id);
           if (i > NO_GAME) {
-            if (data.t === "fen") { //console.log(data);
-              updateGame(game_list[i],data.d,i < num_games)
-            }
-            else if (data.t === "finish") {
-              console.log("TV Game finished: " + game_list[1].gid);
-              game_list[i].fin = true;
-              initAllGames();
-            }
+            if (data.t === "fen") updateGame(game_list[i],data.d,(i < num_games));
+            else if (data.t === "finish" && i < num_games) gameOver(data,game_list[i]);
           }
         }
       }
     }
   }
 
-  lich_sock.onclose = function () {
+  lich_sock.onclose = function () { //document.getElementById("sockButt").innerText = "Start";
     console.log("Socket closed");
     clearInterval(msg_loop);
     lich_sock = null;
-    document.getElementById("sockButt").innerText = "Start";
     for (let i=0; i<game_list.length; i++) game_list[i] = undefined;
   }
 
@@ -175,20 +194,16 @@ function processEvent(event) {
   console.log(event);
   if (event.type === "gameStart") { //console.log("Playing new game: " + event.game.id);
     setPlaying(true);
-    play_game = newGame(event.game.id,"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
+    play_game = newGame(event.game.id,"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR",true);
 
-    fetch("https://lichess.org/api/board/game/stream/" + play_game.gid, {
-      method: 'get',
-      headers:{'Accept':'application/x-ndjson','Authorization': `Bearer ` + oauth }
-    }).then(readStream(processEvent));
+    board_queue.push(snapshot(play_game)); startWatching(play_game.gid);
 
-    startWatching(play_game.gid);
-    drawBoard(play_game);
+    //fetch("https://lichess.org/api/board/game/stream/" + play_game.gid, {
+    //  method: 'get',
+    //  headers:{'Accept':'application/x-ndjson','Authorization': `Bearer ` + oauth }
+    //}).then(readStream(processEvent));
   }
-  else if (event.type === "gameFinish") {
-    setPlaying(false);
-    initAllGames();
-  }
+  //else if (event.type === "gameFinish") { setPlaying(false); initAllGames(); }
 }
 
 function setPlaying(bool) {
@@ -205,7 +220,7 @@ const readStream = processLine => response => {
 
   const loop = () =>
     stream.read().then(({ done, value }) => {
-      if (!streaming || done) {
+      if (!logged_in || done) {
         if (buf.length > 0) processLine(JSON.parse(buf));
       } else {
         const chunk = decoder.decode(value, {
@@ -239,7 +254,7 @@ function seek() {
     method: 'post',
     signal: seek_signal,
     headers: {'Content-Type':'application/json','Authorization': `Bearer ` + oauth},
-    body: JSON.stringify({rated: false, time: 2, increment: 10, variant: "threeCheck"})
+    body: JSON.stringify({rated: false, time: 2, increment: 10, variant: "standard"})
   }).then(response => {
     let seek_reader = response.body.getReader();
     seek_reader.read().then(function processSeek({ done, value }) {

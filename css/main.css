@@ -32,6 +32,17 @@ button {
   color: white;
 }
 
+#sidebar {
+  width: 100%;
+  height: 10%;
+  background-color: black;
+}
+
+#boards {
+  width: 100%;
+  height: 90%;
+}
+
 /* Modal backgrounds */
 .modal_overlays {
   display: none; /* Hidden by default (not block) */
