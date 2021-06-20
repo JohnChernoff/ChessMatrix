@@ -17,8 +17,10 @@ let playing = false;
 function setOauth() {
   oauth = window.location.search.substr(1);
   if (oauth.length > 0) {
-    setCookie("oauth",oauth,180);
-    console.log("New oauth: " + oauth);
+    let token = oauth.substring(oauth.indexOf("=")+1);
+    setCookie("oauth",token,180);
+    //console.log("New oauth: " + token);
+    oauth = token;
     window.history.replaceState({}, document.title,window.location.href.split('?')[0]);
   }
   else {
@@ -159,14 +161,14 @@ function runLichessSocket() { //document.getElementById("sockButt").innerText = 
       if (data.d.id) { //console.log(data);
         if (playing) {
           if (play_game.gid === data.d.id) {
-            if (data.t === "fen") updateGame(play_game,data.d,true);
+            if (data.t === "fen" && play_game.winner === null) updateGame(play_game,data.d,true);
             else if (data.t === "finish") gameOver(data,play_game);
           }
         }
         else {
           let i = getObservedGame(data.d.id);
           if (i > NO_GAME) {
-            if (data.t === "fen") updateGame(game_list[i],data.d,(i < num_games));
+            if (data.t === "fen" && game_list[i].winner === null) updateGame(game_list[i],data.d,(i < num_games));
             else if (data.t === "finish" && i < num_games) gameOver(data,game_list[i]);
           }
         }
@@ -198,10 +200,10 @@ function processEvent(event) {
 
     board_queue.push(snapshot(play_game)); startWatching(play_game.gid);
 
-    //fetch("https://lichess.org/api/board/game/stream/" + play_game.gid, {
-    //  method: 'get',
-    //  headers:{'Accept':'application/x-ndjson','Authorization': `Bearer ` + oauth }
-    //}).then(readStream(processEvent));
+    fetch("https://lichess.org/api/board/game/stream/" + play_game.gid, {
+      method: 'get',
+      headers:{'Accept':'application/x-ndjson','Authorization': `Bearer ` + oauth }
+    }).then(readStream(processEvent));
   }
   //else if (event.type === "gameFinish") { setPlaying(false); initAllGames(); }
 }
@@ -253,14 +255,18 @@ function seek() {
   fetch("https://lichess.org/api/board/seek",{
     method: 'post',
     signal: seek_signal,
-    headers: {'Content-Type':'application/json','Authorization': `Bearer ` + oauth},
-    body: JSON.stringify({rated: false, time: 2, increment: 10, variant: "standard"})
+    headers: {'Content-Type':'application/x-www-form-urlencoded','Authorization': `Bearer ` + oauth},
+    body: "rated=false&time=2&increment=10"
   }).then(response => {
     let seek_reader = response.body.getReader();
     seek_reader.read().then(function processSeek({ done, value }) {
-      if (!done) seek_reader.read().then(processSeek);
+      if (!done) {
+        console.log("Seek data: " + value);
+        seek_reader.read().then(processSeek);
+      }
+      else endCurrentSeek();
     });
-  }).catch(function () { console.log("seek aborted"); }).finally( function() { endCurrentSeek(); } );
+  }).catch(oops => { console.log("seek aborted: " + oops); }); //.finally( function() { endCurrentSeek(); } );
 }
 
 function endCurrentSeek() {
