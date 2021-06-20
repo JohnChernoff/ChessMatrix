@@ -42,13 +42,13 @@ canvas.addEventListener("mousedown", event => {
       }
     }
     else {
-      play_game.fin = true; playing = false; clearScreen(); initAllGames();
+      play_game.fin = true; playing = false; clearScreen(); initGames("blitz",false);
     }
   }
   else {
     let board = getObsBoardFromClick(event);
     if (board !== null) { //board.winner = "Zug"; board_queue.push(board);
-      board.fin = true; initAllGames();
+      board.fin = true; initGames("blitz",false);
     }
   }
 });
@@ -70,7 +70,7 @@ function resize() {
   canvas.style.width = canvas.width + "px";
   play_board_size = Math.min(canvas.width,canvas.height);
   clearScreen(); console.log("Resizing to: " + canvas.width + "," + canvas.height);
-  if (observing) fitBoardsToScreen();
+  //if (observing) fitBoardsToScreen();
 }
 
 function clearScreen() {
@@ -102,7 +102,7 @@ function fitBoardsToScreen() {
 
 function boardLoop() {
   if (board_queue.length > 0) {
-    let board = board_queue.pop();
+    let board = board_queue.pop(); //TODO: retain this for redrawing
     if (!board.fin) drawBoard(board);
   }
   requestAnimationFrame(boardLoop);
@@ -235,7 +235,7 @@ function isAlive(cell,neighbours,max_age) {
 }
 
 function getBoardNumber(board) {
-  for (let n = 0; n < game_list.length; n++) if (board.gid === game_list[n].gid) return n;
+  for (let n = 0; n < game_list.length; n++) if (board.info.id === game_list[n].info.id) return n;
   return -1;
 }
 
@@ -301,14 +301,13 @@ function drawBoard(board) {
   ctx.fillRect(board_x,board_y - sz2,board_width,sz2);
   ctx.fillRect(board_x,board_y + board_height,board_width,sz2);
 
-  if (board.info !== null) { //console.log(board.info.players.white.user.id + " vs. " + board.info.players.black.user.id);
-    ctx.fillStyle = "black";
-    ctx.font = 'bold ' + (sz2/1.5) + 'px fixedsys'; let fontpad = sz2/4;
-    let black_txt = board.info.players.black.user.id + "(" + board.info.players.black.rating + ") : " + sec2hms(board.clock.black);
-    ctx.fillText(black_txt, board_x + centerText(black_txt,board_width),board_y - fontpad);
-    let white_txt = board.info.players.white.user.id + "(" + board.info.players.white.rating + ") : " + sec2hms(board.clock.white);
-    ctx.fillText(white_txt, board_x + centerText(white_txt,board_width), (board_y + sz2 + board_height) - fontpad);
-  }
+  let players = getPlayers(board);
+  ctx.fillStyle = "black";
+  ctx.font = 'bold ' + (sz2/1.5) + 'px fixedsys'; let fontpad = sz2/4;
+  let black_txt = players.black.name + "(" + players.black.rating + ") : " + sec2hms(board.clock.black);
+  ctx.fillText(black_txt, board_x + centerText(black_txt,board_width),board_y - fontpad);
+  let white_txt = players.white.name + "(" + players.white.rating + ") : " + sec2hms(board.clock.white);
+  ctx.fillText(white_txt, board_x + centerText(white_txt,board_width), (board_y + sz2 + board_height) - fontpad);
 
 }
 

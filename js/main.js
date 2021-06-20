@@ -41,8 +41,7 @@ function checkCookie() {
 }
 
 function sec2hms(timect){
-
-  if(timect=== undefined||timect==0||timect === null){return ''};
+  if(timect=== undefined|| timect===0||timect === null) return '';
   //timect is seconds, NOT milliseconds
   let se=timect % 60; //the remainder after div by 60
   timect = Math.floor(timect/60);
