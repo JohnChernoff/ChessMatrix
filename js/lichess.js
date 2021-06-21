@@ -1,17 +1,18 @@
 const NO_GAME = -1; //const FEN_SUFFIX = " - - 1 1";
 let piece_chars = "kqrbnp-PNBRQK";
-let num_games = 15;
-let game_list = []; game_list.length = num_games;
+let num_games = range_games.valueAsNumber;
+let game_list = [];
 let play_game;
 let lich_sock = null;
-let queue = [];
+let msg_queue = [];
 let msg_loop = null;
 let oauth;
 let seek_controller, seek_signal;
 let logged_in = false;
-let observing = false;
+let watching = false;
 let playing = false;
 let start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+let user_name = "anon";
 
 function setOauth() {
   oauth = window.location.search.substr(1);
@@ -26,18 +27,23 @@ function setOauth() {
   }
   if (oauth.length > 0) {
     logged_in = true;
-    getEvents();
+    fetch("https://lichess.org/api/account",{
+      method: "get",
+      headers:{ 'Accept':'application/json', 'Authorization': `Bearer ` + oauth }
+    }).then(result => result.json()).then(json => { user_name = json.username; getEvents(); });
   }
   else console.log("Bad oauth, augh");
 }
 
 function initGames(type,init) {
   console.log("Fetching TV Games...");
-  if (init) for (let i = 0; i < num_games; i++) {
-    game_list[i] = newGame({ id: "DumGame" + i},start_fen,false);
-    game_list[i].fin = true;
+  if (init) {
+    for (let i = 0; i < num_games; i++) {
+      game_list[i] = newGame({id: "IniGame" + i}, false, false, null); //TODO: another kludge
+      game_list[i].fin = true;
+    }
+    fitBoardsToScreen();
   }
-  fitBoardsToScreen();
   fetch("http://lichess.org/api/tv/" + type,{
     method: "get",
     headers:{'Accept':'application/x-ndjson'}
@@ -46,10 +52,11 @@ function initGames(type,init) {
 
 function processNewTV(game) { //console.log("New TV Game : " + JSON.stringify(game));
   if (game.id !== null && getObservedGame(game.id) === NO_GAME) {
-    for (let i = 0; i < game_list.length; i++) {
-      if (game_list[i].fin) { console.log("Adding " + game.id + " at index: " + i);
+    for (let i = 0; i < num_games; i++) {
+      if (game_list[i].fin) {
         let prev_x = game_list[i].canvas_loc.x, prev_y = game_list[i].canvas_loc.y;
-        game_list[i] = newGame(game,false);
+        game_list[i] = newGame(game,false,game.players.black.rating > game.players.white.rating);
+        console.log("Adding " + getPlayString(game_list[i]) + " at index: " + i);
         game_list[i].canvas_loc.x = prev_x; game_list[i].canvas_loc.y = prev_y;
         board_queue.push(snapshot(game_list[i]));
         startWatching(game.id);
@@ -57,32 +64,48 @@ function processNewTV(game) { //console.log("New TV Game : " + JSON.stringify(ga
       }
     }
   }
-  observing = true;
+  watching = true;
 }
 
-function newGame(data,playing) {
+function endGame(board) {
+  clearInterval(board.timer); board.fin = true; initGames("blitz",false);
+}
+
+function newGame(data,playing,black_pov,timer) {
   let fen = start_fen;
   if (data.moves !== undefined) {
     const game = new Chess(), moves = data.moves.split(" ");
     for (let i=0;i<moves.length;i++) game.move(moves[i]);
     fen = game.fen();
   }
-  return {
-    playing : playing,
-    fin : false, matrix : initMatrix(fen), canvas_loc : { x : 0, y : 0 },
-    last_move : "", clock : { white: 0, black: 0 }, winner : null, info : data
+  let board = {
+    playing : playing, black_pov : black_pov, fin : false,
+    matrix : initMatrix(fen,black_pov), canvas_loc : { x : 0, y : 0 },
+    turn: fen.split(" ")[1], last_move : "", clock : { white: 0, black: 0 },
+    winner : null, info : data
   };
+  board.timer = timer === undefined ? setInterval(nextGameTick,1000,board): timer;
+  return board;
+}
+
+function nextGameTick(board) { //console.log("Timer: " + board.timer);
+  if (playing === board.playing) {
+    if (board.turn === "b") board.clock.black--;
+    else if (board.turn === "w") board.clock.white--;
+    drawStatus(board,getBoardDim(board));
+  }
 }
 
 function snapshot(board) {
-  return JSON.parse(JSON.stringify(board));
+  return board;
+  //return JSON.parse(JSON.stringify(board));
 }
 
 function startWatching(gid) {
   send(lich_sock, JSON.stringify({ t: 'startWatching', d: gid }));
 }
 
-function initMatrix(fen) {
+function initMatrix(fen,black_pov) {
   let matrix = [];
   for (let x=0;x<8;x++) {
     matrix[x] = []; for (let y=0;y<8;y++) {
@@ -96,29 +119,33 @@ function initMatrix(fen) {
     for (let i = 0; i < ranks[rank].length; i++) {
       let char = ranks[rank].charAt(i);
       let piece = piece_chars.indexOf(char);
-      if (piece === -1) file += parseInt(char); else matrix[rank][file++].piece = piece - 6;
+      if (piece === -1) file += parseInt(char); else {
+        if (black_pov) matrix[7-rank][7-file++].piece = piece - 6;
+        else matrix[rank][file++].piece = piece - 6;
+      }
     }
   }
   return matrix;
 }
 
 function getObservedGame(gid) {
-  for (let i=0;i<game_list.length;i++) if (game_list[i].info.id === gid) return i;
+  for (let i=0;i<num_games;i++) if (game_list[i].info.id === gid) return i;
   return NO_GAME;
 }
 
 function send(sock, message) {
-  if (sock.readyState === 1) sock.send(message); else queue.push(message);
+  if (sock.readyState === 1) sock.send(message); else msg_queue.push(message);
 }
 
-function updateGame(board,game_data,draw) {
-  board.matrix = initMatrix(game_data.fen);
+function updateGame(board,game_data,draw) { //console.log("Update data: " + JSON.stringify(game_data));
+  board.matrix = initMatrix(game_data.fen,board.black_pov);
   board.last_move = game_data.lm;
   board.clock = { white : game_data.wc, black : game_data.bc };
+  board.turn = game_data.fen.split(" ")[1];
   if (draw) board_queue.push(snapshot(board));
 }
 
-function gameOver(data,board) { //console.log("Winner: " + JSON.stringify(data));
+function setWinner(data,board) { //console.log("Winner: " + JSON.stringify(data));
   let players = getPlayers(board);
   switch (data.d.win) {
     case "w": board.winner = players.white.name; break;
@@ -126,6 +153,7 @@ function gameOver(data,board) { //console.log("Winner: " + JSON.stringify(data))
     case "null": board.winner = "draw/abort"; break;
     default:  board.winner = "???";
   }
+  clearInterval(board.timer);
   board_queue.push(board);
 }
 
@@ -134,9 +162,9 @@ function runLichessSocket() { //document.getElementById("sockButt").innerText = 
 
   lich_sock.onopen = function () {
     console.log("Connected to Lichess..."); //send(lich_sock,JSON.stringify({t: 'poolIn', d: '1'}));
-    queue = [];
+    msg_queue = [];
     msg_loop = setInterval(function() {
-      if (lich_sock.readyState === 1 && queue.length > 0) lich_sock.send(queue.pop());
+      if (lich_sock.readyState === 1 && msg_queue.length > 0) lich_sock.send(msg_queue.pop());
       else lich_sock.send(" t : 0, p : 0 }");
     },2000);
     initGames("blitz",true);
@@ -151,14 +179,14 @@ function runLichessSocket() { //document.getElementById("sockButt").innerText = 
         if (playing) {
           if (play_game.info.id === data.d.id) {
             if (data.t === "fen" && play_game.winner === null) updateGame(play_game,data.d,true);
-            else if (data.t === "finish") gameOver(data,play_game);
+            else if (data.t === "finish") setWinner(data,play_game);
           }
         }
         else {
           let i = getObservedGame(data.d.id);
           if (i > NO_GAME) {
             if (data.t === "fen" && game_list[i].winner === null) updateGame(game_list[i],data.d,(i < num_games));
-            else if (data.t === "finish" && i < num_games) gameOver(data,game_list[i]);
+            else if (data.t === "finish" && i < num_games) setWinner(data,game_list[i]);
           }
         }
       }
@@ -169,21 +197,20 @@ function runLichessSocket() { //document.getElementById("sockButt").innerText = 
     console.log("Socket closed");
     clearInterval(msg_loop);
     lich_sock = null;
-    for (let i=0; i<game_list.length; i++) game_list[i] = undefined;
+    for (let i=0; i<game_list.length; i++) endGame(game_list[i]);
   }
 
 }
 
 function getEvents() {
-  console.log("Getting event stream...");
+  console.log("Getting event stream for " + user_name + "...");
   fetch("https://lichess.org/api/stream/event",{
     method: 'get',
     headers:{'Accept':'application/x-ndjson','Authorization': `Bearer ` + oauth }
   }).then(readStream(processLobby)).then(msg => console.log("Events done: " + msg));
 }
 
-function processLobby(event) {
-  console.log("Lobby Event: " + JSON.stringify(event));
+function processLobby(event) { //console.log("Lobby Event: " + JSON.stringify(event));
   if (event.type === "gameStart") { //console.log("Playing new game: " + event.game.id);
     fetch("https://lichess.org/api/board/game/stream/" + event.game.id, {
       method: 'get',
@@ -193,20 +220,20 @@ function processLobby(event) {
   //else if (event.type === "gameFinish") { setPlaying(false); initAllGames(); }
 }
 
-function processPlay(event) {
-  console.log("Play Event: " + JSON.stringify(event));
+function processPlay(event) { //console.log("Play Event: " + JSON.stringify(event));
   if (event.type === "gameFull") {
+    play_game = newGame(event,true, event.black.name === user_name);
     setPlaying(true);
-    play_game = newGame(event,true);
-    board_queue.push(snapshot(play_game)); startWatching(play_game.info.id);
+    startWatching(play_game.info.id);
   }
 }
 
-function setPlaying(bool) {
-  playing = bool; console.log("Playing: " + playing); clearScreen();
+function setPlaying(bool) { //console.log("Playing: " + playing); clearScreen();
+  playing = bool; if (!playing) endGame(play_game);
+  drawBoards();
 }
 
-//(ornicar) my function readStream takes a function as argument, and returns a function that takes a response as argument and returns a Promise
+//(ornicar) readStream takes a function as argument, and returns a function that takes a response as argument and returns a Promise
 
 const readStream = processLine => response => {
   const stream = response.body.getReader();
@@ -285,4 +312,9 @@ function getPlayers(board) {
     rating : board.playing ? board.info.white.rating : board.info.players.white.rating,
   }
   return { black: black_player, white: white_player };
+}
+
+function getPlayString(board) {
+  let players = getPlayers(board);
+  return players.white.name + " - " + players.black.name;
 }

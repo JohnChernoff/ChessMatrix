@@ -1,3 +1,5 @@
+//TODO: initial time, changing number of boards
+
 const RED = 0, GREEN = 1, BLUE = 2;
 let range_games = document.getElementById("range_games");
 let chk_shade = document.getElementById("chkShade");
@@ -33,7 +35,7 @@ canvas.addEventListener("mousedown", event => {
       let y = Math.floor(8 / (board_size/(event.pageY - sz2 - document.getElementById("sidebar").clientHeight)));
       ctx.strokeStyle = "white";
       ctx.strokeRect(x * square_size,sz2 + (y * square_size),square_size,square_size);
-      let click_square = getAlgebraic(x,7-y);
+      let click_square = getAlgebraic(play_game.black_pov ? 7 - x : x,play_game.black_pov ? y : 7 - y);
       if (from_click === null) from_click = click_square;
       else {
         to_click = click_square;
@@ -41,15 +43,11 @@ canvas.addEventListener("mousedown", event => {
         from_click = to_click = null;
       }
     }
-    else {
-      play_game.fin = true; playing = false; clearScreen(); initGames("blitz",false);
-    }
+    else setPlaying(false);
   }
   else {
     let board = getObsBoardFromClick(event);
-    if (board !== null) { //board.winner = "Zug"; board_queue.push(board);
-      board.fin = true; initGames("blitz",false);
-    }
+    if (board !== null) endGame(board);
   }
 });
 
@@ -102,33 +100,35 @@ function fitBoardsToScreen() {
 
 function boardLoop() {
   if (board_queue.length > 0) {
-    let board = board_queue.pop(); //TODO: retain this for redrawing
+    let board = board_queue.pop();
     if (!board.fin) drawBoard(board);
   }
   requestAnimationFrame(boardLoop);
   //setTimeout(() => { requestAnimationFrame(boardLoop); }, 120);
 }
 
-function animateBoard(board,board_x,board_y,board_width,board_height,square_width,square_height) {
-  //animateBigLife(board,board_x,board_y,board_width,board_height);
-  animateBoardLife(board,board_x,board_y,board_width,board_height,square_width,square_height);
-  //animateBoardMosh(board,board_x,board_y,board_width,board_height,square_width,square_height);
+function animateBoard(board,board_dim) {
+  //animateBigLife(board,board_dim);
+  animateBoardLife(board,board_dim);
+  //animateBoardMosh(board,board_dim);
 }
 
-function animateBoardMosh(board,board_x,board_y,board_width,board_height,square_width,square_height) {
+function animateBoardMosh(board,board_dim) {
   board.moshing = true;
   let rx = Math.floor(Math.random() * 8), ry = Math.floor(Math.random() * 8);
   if (Math.random() < .5) board.matrix[rx][ry].piece = 0; else board.matrix[rx][ry].piece = rndPiece();
-  board.matrix[rx][ry].control = getControl(rx,ry,board.matrix);
+  board.matrix[rx][ry].control = getControl(rx,ry,board);
   board.matrix[rx][ry].color = getColor(board.matrix[rx][ry]);
-  linearInterpolateBoard(board.matrix,board_x,board_y,square_width,square_height);
+  linearInterpolateBoard(board.matrix,board_dim);
   ctx.fillStyle = rndColor();
-  ctx.font = 'bold ' + (board_height/12) + 'px fixedsys';
-  ctx.fillText("Winner: ",board.canvas_loc.x + centerText("winner",board_width), board.canvas_loc.y + board_height/3);
-  ctx.fillText(board.winner,board.canvas_loc.x + centerText(board.winner,board_width), board.canvas_loc.y + board_height/1.5);
+  ctx.font = 'bold ' + (board_dim.board_height/12) + 'px fixedsys';
+  ctx.fillText("Winner: ",
+    board.canvas_loc.x + centerText("winner",board_dim.board_width), board.canvas_loc.y + board_dim.board_height/3);
+  ctx.fillText(board.winner,
+    board.canvas_loc.x + centerText(board.winner,board_dim.board_width), board.canvas_loc.y + board_dim.board_height/1.5);
 }
 
-function animateBoardLife(board,board_x,board_y,board_width,board_height,square_width,square_height) {
+function animateBoardLife(board,board_dim) {
   if (board.board_life === undefined) {
     board.board_life = true; board.square_cells = []; board.square_tmp_cells = [];
     for (let rank=0;rank<8;rank++) {
@@ -153,8 +153,7 @@ function animateBoardLife(board,board_x,board_y,board_width,board_height,square_
     }
   }
 
-  linearInterpolateBoard(board.matrix,board_x,board_y,square_width,square_height);
-  //drawSquares(board.matrix,board_x,board_y,square_width,square_height,false,true,false);
+  linearInterpolateBoard(board.matrix,board_dim); //drawSquares(board.matrix,board_dim.,false,true,false);
   nextTick(board.square_cells,board.square_tmp_cells,128);
 }
 
@@ -167,10 +166,10 @@ function rndColor() {
   return rgb(Math.random() * 255,Math.random() * 255,Math.random() * 255);
 }
 
-function animateBigLife(board,board_x,board_y,board_width,board_height) {
+function animateBigLife(board,board_dim) {
   if (board.big_life === undefined) {
     board.big_life = true; board.big_cells = []; board.big_tmp_cells = [];
-    board.pixels = ctx.getImageData(board_x,board_y,board_width,board_height);
+    board.pixels = ctx.getImageData(board_dim.board_x,board_dim.board_y,board_dim.board_width,board_dim.board_height);
     for (let x=0;x<board.pixels.width;x++) {
       board.big_cells[x] = []; board.big_tmp_cells[x] = [];
       for (let y=0;y<board.pixels.height;y++) {
@@ -183,7 +182,7 @@ function animateBigLife(board,board_x,board_y,board_width,board_height) {
   }
   nextTick(board.big_cells,board.big_tmp_cells,255);
   updateBigLife(board.big_cells,board.big_tmp_cells,board.pixels);
-  ctx.putImageData(board.pixels,board_x,board_y);
+  ctx.putImageData(board.pixels,board_dim.board_x,board_dim.board_y);
 }
 
 function updateBigLife(cells,tmp_cells,pixels) { //let age_factor = 128/max_age;
@@ -235,17 +234,32 @@ function isAlive(cell,neighbours,max_age) {
 }
 
 function getBoardNumber(board) {
-  for (let n = 0; n < game_list.length; n++) if (board.info.id === game_list[n].info.id) return n;
+  for (let n = 0; n < num_games; n++) if (board.info.id === game_list[n].info.id) return n;
   return -1;
 }
 
 function drawBoards() {
-  if (observing) { clearScreen(); for (let i=0; i<num_games; i++) board_queue.push(game_list[i]); }
+  clearScreen();
+  if (playing)  board_queue.push(play_game);
+  else if (watching) { for (let i=0; i<num_games; i++) board_queue.push(game_list[i]); }
 }
 
 function centerText(text, maxWidth) {
   let x = (maxWidth / 2) - ctx.measureText(text).width/2;
   if (x < 0) return 0; else return x;
+}
+
+function getBoardDim(board) {
+  let board_size = playing ? play_board_size : obs_board_size;
+  let status_size = board_size/status_percent; let sz2 = status_size/2;
+  let board_y = board.canvas_loc.y + sz2;
+  let board_width = board_size - status_size, board_height = board_size - status_size;
+  let square_width = (board_width / 8), square_height = (board_height / 8);
+  return {
+    board_size: board_size, status_size: status_size, sz2: sz2,
+    board_x: board.canvas_loc.x, board_y: board_y,
+    board_width: board_width, board_height: board_height, square_width: square_width, square_height: square_height
+  }
 }
 
 function drawBoard(board) {
@@ -255,37 +269,42 @@ function drawBoard(board) {
     clearScreen(); board.canvas_loc.x = 0; board.canvas_loc.y = 0;
   }
   else if (unfitted) fitBoardsToScreen();
+  let board_dim = getBoardDim(board);
 
-  let board_size = playing ? play_board_size : obs_board_size;
-  let status_size = board_size/status_percent;
-  let board_width = board_size - status_size, board_height = board_size - status_size;
-  let board_x = board.canvas_loc.x, board_y = board.canvas_loc.y + (status_size/2);
-  let square_width = (board_width / 8), square_height = (board_height / 8);
-
-  for (let rank = 0; rank < 8; rank++) {
-    for (let file = 0; file < 8; file++) {
-      board.matrix[rank][file].control = getControl(rank,file,board.matrix);
-      board.matrix[rank][file].color = getColor(board.matrix[rank][file]);
-    }
-  }
+  calculateControl(board);
 
   if (board.winner !== null) {  //console.log("Animating: " + getBoardNumber(board));
-    animateBoard(board,board_x,board_y,board_width,board_height,square_width,square_height);
+    animateBoard(board,board_dim);
     if (!board.fin) board_queue.push(board);
     return;
   }
 
-  if (chk_shade.checked) {
-    linearInterpolateBoard(board.matrix,board_x,board_y,square_width,square_height);
-  }
-
-  drawSquares(board.matrix,board_x,board_y,square_width,square_height,!chk_shade.checked,chk_pieces.checked,chk_control.checked);
+  if (chk_shade.checked) linearInterpolateBoard(board.matrix,board_dim);
+  drawSquares(board.matrix,board_dim,!chk_shade.checked,chk_pieces.checked,chk_control.checked);
+  drawMoveArrow(board,board_dim);
+  drawStatus(board,board_dim);
   //ctx.strokeStyle = "rgb(24,24,24)"; ctx.strokeRect(board_x,board_y,board_width,board_height);
+}
 
+function calculateControl(board) {
+  for (let rank = 0; rank < 8; rank++) {
+    for (let file = 0; file < 8; file++) {
+      board.matrix[rank][file].control = getControl(rank,file,board);
+      board.matrix[rank][file].color = getColor(board.matrix[rank][file]);
+    }
+  }
+}
+
+function drawMoveArrow(board,board_dim) {
   let move = getMoveCoords(board.last_move); //console.log(move);
   if (move !== null) {
-    let x1 = board_x + (move.from.x * square_width) + (square_width/2), y1 = board_y + (move.from.y * square_height) + (square_height/2);
-    let x2 = board_x + (move.to.x * square_width) + (square_width/2), y2 = board_y + (move.to.y * square_height) + (square_height/2);
+    if (board.black_pov) {
+      move.from.x = 7 - move.from.x;  move.from.y = 7 - move.from.y;  move.to.x = 7 - move.to.x;  move.to.y = 7 - move.to.y;
+    }
+    let x1 = board_dim.board_x + (move.from.x * board_dim.square_width) + (board_dim.square_width/2)
+    let y1 = board_dim.board_y + (move.from.y * board_dim.square_height) + (board_dim.square_height/2);
+    let x2 = board_dim.board_x + (move.to.x * board_dim.square_width) + (board_dim.square_width/2)
+    let y2 = board_dim.board_y + (move.to.y * board_dim.square_height) + (board_dim.square_height/2);
     ctx.strokeStyle = "gray";
     ctx.fillStyle = "gray";
     ctx.beginPath();
@@ -295,47 +314,52 @@ function drawBoard(board) {
     ctx.arc(x1,y1,8,0,Math.PI * 2,false);
     ctx.stroke(); //drawArrowhead(ctx,{x: x1, y: y1}, {x: x2, y: y2},8);
   }
-
-  ctx.fillStyle = "orange";
-  let sz2 = status_size/2;
-  ctx.fillRect(board_x,board_y - sz2,board_width,sz2);
-  ctx.fillRect(board_x,board_y + board_height,board_width,sz2);
-
-  let players = getPlayers(board);
-  ctx.fillStyle = "black";
-  ctx.font = 'bold ' + (sz2/1.5) + 'px fixedsys'; let fontpad = sz2/4;
-  let black_txt = players.black.name + "(" + players.black.rating + ") : " + sec2hms(board.clock.black);
-  ctx.fillText(black_txt, board_x + centerText(black_txt,board_width),board_y - fontpad);
-  let white_txt = players.white.name + "(" + players.white.rating + ") : " + sec2hms(board.clock.white);
-  ctx.fillText(white_txt, board_x + centerText(white_txt,board_width), (board_y + sz2 + board_height) - fontpad);
-
 }
 
-function drawSquares(matrix,board_x,board_y,square_width,square_height,blocks,pieces,control) {
-  let piece_width = square_width/2, piece_height = square_height/2;
+function drawStatus(board,board_dim) {
+  ctx.fillStyle = "orange";
+  ctx.fillRect(board_dim.board_x,board_dim.board_y - board_dim.sz2,board_dim.board_width,board_dim.sz2);
+  ctx.fillRect(board_dim.board_x,board_dim.board_y + board_dim.board_height,board_dim.board_width,board_dim.sz2);
+  let players = getPlayers(board);
+  ctx.fillStyle = "black";
+  ctx.font = 'bold ' + (board_dim.sz2/1.5) + 'px fixedsys'; let fontpad = board_dim.sz2/4;
+  let top_y = board_dim.board_y - fontpad, bottom_y = (board_dim.board_y + board_dim.sz2 + board_dim.board_height) - fontpad;
+  let black_txt = players.black.name + "(" + players.black.rating + ") : " + sec2hms(board.clock.black);
+  let white_txt = players.white.name + "(" + players.white.rating + ") : " + sec2hms(board.clock.white);
+  ctx.fillText(black_txt, board_dim.board_x + centerText(black_txt,board_dim.board_width),board.black_pov ? bottom_y : top_y);
+  ctx.fillText(white_txt, board_dim.board_x + centerText(white_txt,board_dim.board_width),board.black_pov ? top_y : bottom_y);
+}
+
+function drawSquares(matrix,board_dim,blocks,pieces,control) {
+  let piece_width = board_dim.square_width/2, piece_height = board_dim.square_height/2;
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
-      let squareX = board_x + (file * square_width), squareY = board_y + (rank * square_height);
+      let squareX = board_dim.board_x + (file * board_dim.square_width);
+      let squareY = board_dim.board_y + (rank * board_dim.square_height);
 
       if (blocks) {
         ctx.fillStyle = matrix[rank][file].color;
-        ctx.fillRect(squareX, squareY, square_width, square_height);
+        ctx.fillRect(squareX, squareY, board_dim.square_width, board_dim.square_height);
       }
 
       if (pieces) {
         let p = matrix[rank][file].piece;
         if (p !== 0) { //console.log("Drawing: " + p + " at " + rank + "," + file);
-          if (p < 0) ctx.drawImage(piece_imgs[Math.abs(p)-1].black,squareX + (square_width/4),squareY + (square_height/4),piece_width,piece_height);
-          else ctx.drawImage(piece_imgs[Math.abs(p)-1].white,squareX + (square_width/4),squareY + (square_height/4),piece_width,piece_height);
+          if (p < 0) ctx.drawImage(piece_imgs[Math.abs(p)-1].black,squareX +
+            (board_dim.square_width/4),squareY + (board_dim.square_height/4),piece_width,piece_height);
+          else ctx.drawImage(piece_imgs[Math.abs(p)-1].white,squareX +
+            (board_dim.square_width/4),squareY + (board_dim.square_height/4),piece_width,piece_height);
         }
       }
 
       if (control) {
         ctx.fillStyle = "yellow";
-        ctx.fillText(""+ matrix[rank][file].control,squareX + square_width/2 ,squareY + square_height/1.5);
+        ctx.fillText(""+ matrix[rank][file].control,
+          squareX + board_dim.square_width/2 ,squareY + board_dim.square_height/1.5);
       }
 
-      ctx.strokeStyle = "rgb(128,128,128)"; ctx.strokeRect(squareX,squareY,square_width,square_height);
+      ctx.strokeStyle = "rgb(128,128,128)";
+      ctx.strokeRect(squareX,squareY,board_dim.square_width,board_dim.square_height);
     }
   }
 }
@@ -362,9 +386,9 @@ function inBounds(x,y,rect) {
   return (x >= rect.x1 && y >= rect.y1 && x < (rect.x1 + rect.x2) && y < (rect.y1 + rect.y2));
 }
 
-function linearInterpolateBoard(matrix,board_x,board_y,sqr_w,sqr_h) {
-  let square_width = Math.round(sqr_w); let square_height = Math.round(sqr_h);
-  let board_width = square_width * 8, board_height = square_height * 8;
+function linearInterpolateBoard(matrix,board_dim) {
+  let square_width = Math.round(board_dim.square_width);
+  let square_height = Math.round(board_dim.square_height);
   let padded_board_width = square_width * 10, padded_board_height = square_height * 10;
   let pixArray = [];
   for (let h=0; h < (padded_board_height); h++) {
@@ -404,11 +428,11 @@ function linearInterpolateBoard(matrix,board_x,board_y,sqr_w,sqr_h) {
         }
       }
     }
-  let img_data = ctx.createImageData(board_width,board_height);
+  let img_data = ctx.createImageData(board_dim.board_width,board_dim.board_height);
   let pixels = img_data.data;
   let px2, py2, off;
-  for (let px = 0; px < board_height; px++) {
-    for (let py = 0; py < board_width; py++) {
+  for (let px = 0; px < board_dim.board_height; px++) {
+    for (let py = 0; py < board_dim.board_width; py++) {
       off = (px * img_data.width + py) * 4;
       px2 = px + square_width; py2 = py + square_height;
       pixels[off] = pixArray[px2][py2][0];
@@ -417,7 +441,7 @@ function linearInterpolateBoard(matrix,board_x,board_y,sqr_w,sqr_h) {
       pixels[off + 3] = 255;
     }
   }
-  ctx.putImageData(img_data,board_x,board_y);
+  ctx.putImageData(img_data,board_dim.board_x,board_dim.board_y);
 }
 
 function lerp(v, start, end) {

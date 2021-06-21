@@ -1,11 +1,11 @@
 const EMPTY = 0, PAWN = 1, KNIGHT = 2, BISHOP = 3, ROOK = 4, QUEEN = 5, KING = 6;
 const MAX_CONTROL = 4;
 
-function getControl(x,y,matrix) {
+function getControl(x,y,board) {
   let control = 0;
-  control += knightControl(x,y,matrix);
-  control += diagControl(x,y,matrix);
-  control += lineControl(x,y,matrix);
+  control += knightControl(x,y,board.matrix);
+  control += diagControl(x,y,board.matrix,board.black_pov);
+  control += lineControl(x,y,board.matrix);
   return control;
 }
 
@@ -23,7 +23,7 @@ function knightControl(x1,y1,matrix) {
   return control;
 }
 
-function diagControl(x1,y1,matrix) {
+function diagControl(x1,y1,matrix, black_pov) {
   let control = 0;
   for (let dx = -1; dx <= 1; dx += 2)
   for (let dy = -1; dy <= 1; dy += 2) {
@@ -40,8 +40,8 @@ function diagControl(x1,y1,matrix) {
           if (Math.abs(matrix[x][y].piece) === KING) {
             control += matrix[x][y].piece < 0 ? -1 : 1;
           }
-          else if (matrix[x][y].piece === PAWN && x > x1) control++;
-          else if (matrix[x][y].piece === -PAWN && x < x1) control--;
+          else if (matrix[x][y].piece === (black_pov ? -PAWN : PAWN) && x > x1) control++;
+          else if (matrix[x][y].piece === (black_pov ? PAWN : -PAWN) && x < x1) control--;
         }
         clear_line = (matrix[x][y].piece === EMPTY);
       }
