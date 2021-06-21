@@ -40,8 +40,8 @@ function diagControl(x1,y1,matrix, black_pov) {
           if (Math.abs(matrix[x][y].piece) === KING) {
             control += matrix[x][y].piece < 0 ? -1 : 1;
           }
-          else if (matrix[x][y].piece === (black_pov ? -PAWN : PAWN) && x > x1) control++;
-          else if (matrix[x][y].piece === (black_pov ? PAWN : -PAWN) && x < x1) control--;
+          else if (matrix[x][y].piece === PAWN && (black_pov ? x < x1 : x > x1)) control++;
+          else if (matrix[x][y].piece === -PAWN && (black_pov ? x > x1 : x < x1)) control--;
         }
         clear_line = (matrix[x][y].piece === EMPTY);
       }
