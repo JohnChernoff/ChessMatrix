@@ -1,18 +1,17 @@
-const NO_GAME = -1; //const FEN_SUFFIX = " - - 1 1";
-let piece_chars = "kqrbnp-PNBRQK";
-let num_games = range_games.valueAsNumber;
-let game_list = [];
-let play_game;
-let lich_sock = null;
+//const FEN_SUFFIX = " - - 1 1";
+const PIECE_CHRS = "kqrbnp-PNBRQK";
+const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+let user_name = "anon";
+let board_list = [];
 let msg_queue = [];
+let play_board = null;
+let lich_sock = null;
 let msg_loop = null;
-let oauth;
+let oauth = null;
 let seek_controller, seek_signal;
 let logged_in = false;
 let watching = false;
 let playing = false;
-let start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-let user_name = "anon";
 
 function setOauth() {
   oauth = window.location.search.substr(1);
@@ -35,30 +34,38 @@ function setOauth() {
   else console.log("Bad oauth, augh");
 }
 
-function initGames(type,init) {
-  console.log("Fetching TV Games...");
-  if (init) {
-    for (let i = 0; i < num_games; i++) {
-      game_list[i] = newGame({id: "IniGame" + i}, false, false, null); //TODO: another kludge
-      game_list[i].fin = true;
+function setBoards(type,num) {
+  if (type === undefined) type = "blitz";
+  if (num === undefined) num = range_games.valueAsNumber;
+  console.log("Fetching " + num + " TV Games...");
+  let changed = true;
+  if (board_list.length < num) {
+    for (let i = board_list.length; i < num; i++) {
+      board_list[i] = newBoard({id: "KludgeGame" + i}, false, false, null); //TODO: something less kludgy
+      board_list[i].fin = true;
     }
-    fitBoardsToScreen();
   }
-  fetch("http://lichess.org/api/tv/" + type,{
+  else if (board_list.length > num) {
+    for (let i=num;i<board_list.length;i++) clearBoard(board_list[i]);
+    board_list = board_list.slice(0,num);
+  }
+  else changed = false;
+  if (changed) drawBoards();
+  fetch("http://lichess.org/api/tv/" + type + "?nb=" + num,{
     method: "get",
     headers:{'Accept':'application/x-ndjson'}
   }).then(readStream(processNewTV)); //.then(msg => console.log("TV games fetched: " + msg));
 }
 
 function processNewTV(game) { //console.log("New TV Game : " + JSON.stringify(game));
-  if (game.id !== null && getObservedGame(game.id) === NO_GAME) {
-    for (let i = 0; i < num_games; i++) {
-      if (game_list[i].fin) {
-        let prev_x = game_list[i].canvas_loc.x, prev_y = game_list[i].canvas_loc.y;
-        game_list[i] = newGame(game,false,game.players.black.rating > game.players.white.rating);
-        console.log("Adding " + getPlayString(game_list[i]) + " at index: " + i);
-        game_list[i].canvas_loc.x = prev_x; game_list[i].canvas_loc.y = prev_y;
-        board_queue.push(snapshot(game_list[i]));
+  if (game.id !== null && getObservedGame(game.id) === null) {
+    for (let i = 0; i < board_list.length; i++) {
+      if (board_list[i].fin) {
+        let prev_x = board_list[i].canvas_loc.x, prev_y = board_list[i].canvas_loc.y;
+        board_list[i] = newBoard(game,false,game.players.black.rating > game.players.white.rating);
+        console.log("Adding " + getPlayString(board_list[i]) + " at index: " + i);
+        board_list[i].canvas_loc.x = prev_x; board_list[i].canvas_loc.y = prev_y;
+        board_queue.push(snapshot(board_list[i]));
         startWatching(game.id);
         break;
       }
@@ -67,12 +74,12 @@ function processNewTV(game) { //console.log("New TV Game : " + JSON.stringify(ga
   watching = true;
 }
 
-function endGame(board) {
-  clearInterval(board.timer); board.fin = true; initGames("blitz",false);
+function clearBoard(board) {
+  clearInterval(board.timer); board.fin = true;
 }
 
-function newGame(data,playing,black_pov,timer) {
-  let fen = start_fen;
+function newBoard(data,playing,black_pov,timer) {
+  let fen = START_FEN;
   if (data.moves !== undefined) {
     const game = new Chess(), moves = data.moves.split(" ");
     for (let i=0;i<moves.length;i++) game.move(moves[i]);
@@ -96,9 +103,8 @@ function nextGameTick(board) { //console.log("Timer: " + board.timer);
   }
 }
 
-function snapshot(board) {
-  return board;
-  //return JSON.parse(JSON.stringify(board));
+function snapshot(board) { //return board;
+  return JSON.parse(JSON.stringify(board));
 }
 
 function startWatching(gid) {
@@ -118,7 +124,7 @@ function initMatrix(fen,black_pov) {
     let file = 0;
     for (let i = 0; i < ranks[rank].length; i++) {
       let char = ranks[rank].charAt(i);
-      let piece = piece_chars.indexOf(char);
+      let piece = PIECE_CHRS.indexOf(char);
       if (piece === -1) file += parseInt(char); else {
         if (black_pov) matrix[7-rank][7-file++].piece = piece - 6;
         else matrix[rank][file++].piece = piece - 6;
@@ -129,27 +135,19 @@ function initMatrix(fen,black_pov) {
 }
 
 function getObservedGame(gid) {
-  for (let i=0;i<num_games;i++) if (game_list[i].info.id === gid) return i;
-  return NO_GAME;
+  for (let i=0; i<board_list.length; i++) if (board_list[i].info.id === gid && !board_list[i].fin) return board_list[i];
+  return null;
 }
 
 function send(sock, message) {
   if (sock.readyState === 1) sock.send(message); else msg_queue.push(message);
 }
 
-function updateGame(board,game_data,draw) { //console.log("Update data: " + JSON.stringify(game_data));
-  board.matrix = initMatrix(game_data.fen,board.black_pov);
-  board.last_move = game_data.lm;
-  board.clock = { white : game_data.wc, black : game_data.bc };
-  board.turn = game_data.fen.split(" ")[1];
-  if (draw) board_queue.push(snapshot(board));
-}
-
 function setWinner(data,board) { //console.log("Winner: " + JSON.stringify(data));
-  let players = getPlayers(board);
+  let info = getInfo(board);
   switch (data.d.win) {
-    case "w": board.winner = players.white.name; break;
-    case "b": board.winner = players.black.name; break;
+    case "w": board.winner = info.white.name; break;
+    case "b": board.winner = info.black.name; break;
     case "null": board.winner = "draw/abort"; break;
     default:  board.winner = "???";
   }
@@ -167,39 +165,40 @@ function runLichessSocket() { //document.getElementById("sockButt").innerText = 
       if (lich_sock.readyState === 1 && msg_queue.length > 0) lich_sock.send(msg_queue.pop());
       else lich_sock.send(" t : 0, p : 0 }");
     },2000);
-    initGames("blitz",true);
+    setBoards();
   }
 
   lich_sock.onerror = function (error) { console.error("Oops: " + error); }
 
-  lich_sock.onmessage = function (e) { //console.log(("Message: ") + e.data);
-    let data = JSON.parse(e.data);
-    if (data.t) { //console.log(data);
-      if (data.d.id) { //console.log(data);
-        if (playing) {
-          if (play_game.info.id === data.d.id) {
-            if (data.t === "fen" && play_game.winner === null) updateGame(play_game,data.d,true);
-            else if (data.t === "finish") setWinner(data,play_game);
-          }
-        }
-        else {
-          let i = getObservedGame(data.d.id);
-          if (i > NO_GAME) {
-            if (data.t === "fen" && game_list[i].winner === null) updateGame(game_list[i],data.d,(i < num_games));
-            else if (data.t === "finish" && i < num_games) setWinner(data,game_list[i]);
-          }
-        }
-      }
-    }
-  }
+  //lich_sock.onmessage = function (e) { newObservation(e); }
+  lich_sock.onmessage = e => newObservation(e);
 
   lich_sock.onclose = function () { //document.getElementById("sockButt").innerText = "Start";
     console.log("Socket closed");
     clearInterval(msg_loop);
     lich_sock = null;
-    for (let i=0; i<game_list.length; i++) endGame(game_list[i]);
+    for (let i=0; i<board_list.length; i++) clearBoard(board_list[i]);
   }
 
+}
+
+function newObservation(e) {
+  let data = JSON.parse(e.data);
+  if (data.t) { //console.log(data);
+    if (data.d.id) { //console.log(data);
+      let board = playing ? play_board : getObservedGame(data.d.id);
+      if (playing ? play_board.info.id === data.d.id : board !== null) {
+        if (data.t === "fen" && board.winner == null) {
+          board.matrix = initMatrix(data.d.fen,board.black_pov);
+          board.last_move = data.d.lm;
+          board.clock = { white : data.d.wc, black : data.d.bc };
+          board.turn = data.d.fen.split(" ")[1];
+          board_queue.push(snapshot(board));
+        }
+        else if (data.t === "finish") setWinner(data,board);
+      }
+    }
+  }
 }
 
 function getEvents() {
@@ -222,14 +221,17 @@ function processLobby(event) { //console.log("Lobby Event: " + JSON.stringify(ev
 
 function processPlay(event) { //console.log("Play Event: " + JSON.stringify(event));
   if (event.type === "gameFull") {
-    play_game = newGame(event,true, event.black.name === user_name);
+    play_board = newBoard(event,true, event.black.name === user_name);
     setPlaying(true);
-    startWatching(play_game.info.id);
+    startWatching(play_board.info.id);
   }
 }
 
 function setPlaying(bool) { //console.log("Playing: " + playing); clearScreen();
-  playing = bool; if (!playing) endGame(play_game);
+  playing = bool;
+  if (!playing) {
+    clearBoard(play_board); setBoards();
+  }
   drawBoards();
 }
 
@@ -296,14 +298,14 @@ function endCurrentSeek() {
 }
 
 function makeMove(move) {
-  fetch("https://lichess.org/api/board/game/" + play_game.info.id + "/move/" + move, {
+  fetch("https://lichess.org/api/board/game/" + play_board.info.id + "/move/" + move, {
     method: 'post',
     headers: {'Authorization': `Bearer ` + oauth}
   }).then(res => res.text().then(text => console.log(text)));
 }
 
-function getPlayers(board) {
-  let black_player = { //TODO: fix this yucky kludge
+function getInfo(board) { //TODO: fix this yucky kludge
+  let black_player = {
     name : board.playing ? board.info.black.name : board.info.players.black.user.id,
     rating : board.playing ? board.info.black.rating : board.info.players.black.rating,
   }
@@ -311,10 +313,14 @@ function getPlayers(board) {
     name : board.playing ? board.info.white.name : board.info.players.white.user.id,
     rating : board.playing ? board.info.white.rating : board.info.players.white.rating,
   }
-  return { black: black_player, white: white_player };
+  return {
+    black: black_player,
+    white: white_player,
+    initial_time: board.playing ? board.info.clock.initial/1000 : board.info.clock.initial
+  };
 }
 
 function getPlayString(board) {
-  let players = getPlayers(board);
-  return players.white.name + " - " + players.black.name;
+  let info = getInfo(board);
+  return info.white.name + " - " + info.black.name;
 }

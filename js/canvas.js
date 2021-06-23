@@ -1,4 +1,4 @@
-//TODO: initial time, changing number of boards
+//TODO: weird animation catchups from tabbing away
 
 const RED = 0, GREEN = 1, BLUE = 2;
 let range_games = document.getElementById("range_games");
@@ -16,6 +16,7 @@ let background_color = "black";
 let from_click = null, to_click = null;
 let status_percent = 10;
 let board_queue = [];
+let anim_test = false;
 
 for (let i=0; i<6; i++) {
   piece_imgs[i] = { black: new Image(), white: new Image() }; //onload?
@@ -26,7 +27,7 @@ boardLoop(); //TODO: maybe place in onload of all images?
 
 canvas.addEventListener("mousedown", event => {
   if (playing) {
-    if (play_game.winner == null) {
+    if (play_board.winner == null) {
       let status_size = play_board_size / status_percent;
       let sz2 = status_size/2;
       let board_size = play_board_size - status_size;
@@ -35,7 +36,7 @@ canvas.addEventListener("mousedown", event => {
       let y = Math.floor(8 / (board_size/(event.pageY - sz2 - document.getElementById("sidebar").clientHeight)));
       ctx.strokeStyle = "white";
       ctx.strokeRect(x * square_size,sz2 + (y * square_size),square_size,square_size);
-      let click_square = getAlgebraic(play_game.black_pov ? 7 - x : x,play_game.black_pov ? y : 7 - y);
+      let click_square = getAlgebraic(play_board.black_pov ? 7 - x : x,play_board.black_pov ? y : 7 - y);
       if (from_click === null) from_click = click_square;
       else {
         to_click = click_square;
@@ -46,17 +47,23 @@ canvas.addEventListener("mousedown", event => {
     else setPlaying(false);
   }
   else {
-    let board = getObsBoardFromClick(event);
-    if (board !== null) endGame(board);
+    let board = getObsBoardFromClick(event); if (board !== null)  {
+      if (anim_test) {
+        board.winner = "Test"; board_queue.push(board);
+      }
+      else {
+        clearBoard(board); setBoards();
+      }
+    }
   }
 });
 
 function getObsBoardFromClick(event) {
-  for (let i=0; i<num_games; i++) {
+  for (let i=0; i<board_list.length; i++) {
     if (inBounds(event.pageX ,event.pageY,  {
-      x1: game_list[i].canvas_loc.x, y1: game_list[i].canvas_loc.y,
+      x1: board_list[i].canvas_loc.x, y1: board_list[i].canvas_loc.y,
       x2: obs_board_size, y2: obs_board_size
-    })) return game_list[i];
+    })) return board_list[i];
   }
   return null;
 }
@@ -67,8 +74,8 @@ function resize() {
   canvas.width = window.innerWidth - 16;
   canvas.style.width = canvas.width + "px";
   play_board_size = Math.min(canvas.width,canvas.height);
-  clearScreen(); console.log("Resizing to: " + canvas.width + "," + canvas.height);
-  //if (observing) fitBoardsToScreen();
+  console.log("Resizing to: " + canvas.width + "," + canvas.height);
+  if (watching) drawBoards();
 }
 
 function clearScreen() {
@@ -76,23 +83,26 @@ function clearScreen() {
   ctx.fillRect(0,0,canvas.width,canvas.height);
 }
 
-function fitBoardsToScreen() {
-  num_games = range_games.valueAsNumber; //console.log("Games: " + num_games);
-  let n = Math.floor(Math.sqrt(num_games));
+
+
+function fitBoardsToScreen() { //console.trace();
+  //num_boards = range_games.valueAsNumber; console.log("Games: " + board_list.length);
+  board_queue = [];
+  let n = Math.floor(Math.sqrt(board_list.length));
   let board_num = 0;
   let long_length = canvas.width > canvas.height ? canvas.width : canvas.height; //TODO: use Math.min,max
   let short_length = canvas.width > canvas.height ? canvas.height : canvas.width;
   let rows = n;
-  let max_cols = num_games/rows;
+  let max_cols = board_list.length/rows;
   obs_board_size = Math.floor(Math.min(long_length/max_cols,short_length/rows)) * .95;
   for (let row = 0; row < rows; row++) {
     let cols = Math.floor(long_length / obs_board_size);
     let padding1 = long_length / cols, padding2 = short_length/rows;
 
     for (let i = 0; i<cols; i++) {
-      if (canvas.width > canvas.height) game_list[board_num].canvas_loc = { x: padding1 * i , y: padding2 * row };
-      else game_list[board_num].canvas_loc = { y: padding2 * row , x: padding1 * i };
-      if (++board_num >= num_games) return;
+      if (canvas.width > canvas.height) board_list[board_num].canvas_loc = { x: padding1 * i , y: padding2 * row };
+      else board_list[board_num].canvas_loc = { y: padding2 * row , x: padding1 * i };
+      if (++board_num >= board_list.length) break;
     }
   }
   unfitted = false;
@@ -100,61 +110,11 @@ function fitBoardsToScreen() {
 
 function boardLoop() {
   if (board_queue.length > 0) {
-    let board = board_queue.pop();
+    let board = board_queue.shift();
     if (!board.fin) drawBoard(board);
   }
   requestAnimationFrame(boardLoop);
   //setTimeout(() => { requestAnimationFrame(boardLoop); }, 120);
-}
-
-function animateBoard(board,board_dim) {
-  //animateBigLife(board,board_dim);
-  animateBoardLife(board,board_dim);
-  //animateBoardMosh(board,board_dim);
-}
-
-function animateBoardMosh(board,board_dim) {
-  board.moshing = true;
-  let rx = Math.floor(Math.random() * 8), ry = Math.floor(Math.random() * 8);
-  if (Math.random() < .5) board.matrix[rx][ry].piece = 0; else board.matrix[rx][ry].piece = rndPiece();
-  board.matrix[rx][ry].control = getControl(rx,ry,board);
-  board.matrix[rx][ry].color = getColor(board.matrix[rx][ry]);
-  linearInterpolateBoard(board.matrix,board_dim);
-  ctx.fillStyle = rndColor();
-  ctx.font = 'bold ' + (board_dim.board_height/12) + 'px fixedsys';
-  ctx.fillText("Winner: ",
-    board.canvas_loc.x + centerText("winner",board_dim.board_width), board.canvas_loc.y + board_dim.board_height/3);
-  ctx.fillText(board.winner,
-    board.canvas_loc.x + centerText(board.winner,board_dim.board_width), board.canvas_loc.y + board_dim.board_height/1.5);
-}
-
-function animateBoardLife(board,board_dim) {
-  if (board.board_life === undefined) {
-    board.board_life = true; board.square_cells = []; board.square_tmp_cells = [];
-    for (let rank=0;rank<8;rank++) {
-      board.square_cells[rank] = []; board.square_tmp_cells[rank] = [];
-      for (let file=0;file<8;file++) {
-        board.square_cells[rank][file] = { alive: (board.matrix[rank][file].piece !== 0), age: 0 };
-        board.square_tmp_cells[rank][file] = { alive: (board.matrix[rank][file].piece !== 0), age: 0 };
-        if (board.matrix[rank][file].piece === 0) board.matrix[rank][file].old_piece = Math.random() < .5 ? 6 : -6;
-        else board.matrix[rank][file].old_piece = board.matrix[rank][file].piece > 0 ? 6 : -6;
-        //if (board.matrix[rank][file].old_piece === 0) board.matrix[rank][file].old_piece = rndPiece();
-      }
-    }
-  }
-
-  for (let rank=0;rank<8;rank++) {
-    for (let file=0;file<8;file++) {
-      board.matrix[rank][file].color = getColor(board.matrix[rank][file],"COLOR_SCHEME_BLUE_RED2");
-      board.square_cells[rank][file].alive = board.square_tmp_cells[rank][file].alive;
-      board.square_cells[rank][file].age =  board.square_tmp_cells[rank][file].age;
-      if (board.square_cells[rank][file].alive) board.matrix[rank][file].piece = board.matrix[rank][file].old_piece;
-      else board.matrix[rank][file].piece = 0;
-    }
-  }
-
-  linearInterpolateBoard(board.matrix,board_dim); //drawSquares(board.matrix,board_dim.,false,true,false);
-  nextTick(board.square_cells,board.square_tmp_cells,128);
 }
 
 function rndPiece() {
@@ -166,87 +126,15 @@ function rndColor() {
   return rgb(Math.random() * 255,Math.random() * 255,Math.random() * 255);
 }
 
-function animateBigLife(board,board_dim) {
-  if (board.big_life === undefined) {
-    board.big_life = true; board.big_cells = []; board.big_tmp_cells = [];
-    board.pixels = ctx.getImageData(board_dim.board_x,board_dim.board_y,board_dim.board_width,board_dim.board_height);
-    for (let x=0;x<board.pixels.width;x++) {
-      board.big_cells[x] = []; board.big_tmp_cells[x] = [];
-      for (let y=0;y<board.pixels.height;y++) {
-        board.big_cells[x][y] = { alive: false, age: 0 }; board.big_tmp_cells[x][y] = { alive: false, age: 0 };
-        let i = (x * board.pixels.width + y) * 4;
-        let avg_col = (board.pixels.data[i] + board.pixels.data[i+1] + board.pixels.data[i+2]) / 3;
-        if (avg_col > 92) board.big_cells[x][y].alive = true;
-      }
-    }
-  }
-  nextTick(board.big_cells,board.big_tmp_cells,255);
-  updateBigLife(board.big_cells,board.big_tmp_cells,board.pixels);
-  ctx.putImageData(board.pixels,board_dim.board_x,board_dim.board_y);
-}
-
-function updateBigLife(cells,tmp_cells,pixels) { //let age_factor = 128/max_age;
-  for (let x=0; x<cells.length-1; x++) {
-    for (let y=0; y<cells[x].length-1; y++) {
-      cells[x][y].alive = tmp_cells[x][y].alive;
-      cells[x][y].age = tmp_cells[x][y].age;
-      let i = (x * pixels.width + y) * 4;
-      if (cells[x][y].alive) {
-        pixels.data[i] = 255;
-        pixels.data[i+1] = 0;
-      }
-      else {
-        pixels.data[i] = 0;
-        pixels.data[i+1] = 255;
-      }
-      pixels.data[i+2] = cells[x][y].age;
-      pixels.data[i+3] = 255;
-    }
-  }
-}
-
-function nextTick(cells,tmp_cells,max_age) {
-  let max_x = cells.length-1; let x,y,x1,y1,max_y,n,nx,ny;
-  for (x = 0; x <= max_x; x++) {
-    max_y = cells[x].length-1;
-    for (y = 0; y <= max_y; y++) {
-      n = 0;
-      for (nx = x-1; nx <= x+1; nx++) {
-        for (ny = y-1; ny <= y+1; ny++) {
-          x1 = nx; y1 = ny;
-          if (x1 < 0 ) x1 = max_x; else if (x1 > max_x) x1 = 0;
-          if (y1 < 0 ) y1 = max_y; else if (y1 > max_y) y1 = 0;
-          if ((x1 !== x || y1 !== y) && cells[x1][y1].alive) n++;
-        }
-      }
-      tmp_cells[x][y] = {
-        age: cells[x][y].age + 1,
-        alive: isAlive(cells[x][y],n,max_age)
-      };
-      if (tmp_cells[x][y].alive !== cells[x][y].alive) tmp_cells[x][y].age = 0;
-    }
-  }
-}
-
-function isAlive(cell,neighbours,max_age) {
-  if (cell.alive) return (neighbours > 1 && neighbours < 4 && cell.age < max_age);
-  else return (neighbours === 3 || cell.age > max_age);
-}
-
 function getBoardNumber(board) {
-  for (let n = 0; n < num_games; n++) if (board.info.id === game_list[n].info.id) return n;
+  for (let n = 0; n < board_list.length; n++) if (board.info.id === board_list[n].info.id) return n;
   return -1;
 }
 
 function drawBoards() {
-  clearScreen();
-  if (playing)  board_queue.push(play_game);
-  else if (watching) { for (let i=0; i<num_games; i++) board_queue.push(game_list[i]); }
-}
-
-function centerText(text, maxWidth) {
-  let x = (maxWidth / 2) - ctx.measureText(text).width/2;
-  if (x < 0) return 0; else return x;
+  fitBoardsToScreen(); clearScreen();
+  if (playing) board_queue.push(play_board);
+  else if (watching) { for (let i=0; i<board_list.length; i++) board_queue.push(board_list[i]); }
 }
 
 function getBoardDim(board) {
@@ -320,12 +208,13 @@ function drawStatus(board,board_dim) {
   ctx.fillStyle = "orange";
   ctx.fillRect(board_dim.board_x,board_dim.board_y - board_dim.sz2,board_dim.board_width,board_dim.sz2);
   ctx.fillRect(board_dim.board_x,board_dim.board_y + board_dim.board_height,board_dim.board_width,board_dim.sz2);
-  let players = getPlayers(board);
+  let info = getInfo(board);
   ctx.fillStyle = "black";
   ctx.font = 'bold ' + (board_dim.sz2/1.5) + 'px fixedsys'; let fontpad = board_dim.sz2/4;
   let top_y = board_dim.board_y - fontpad, bottom_y = (board_dim.board_y + board_dim.sz2 + board_dim.board_height) - fontpad;
-  let black_txt = players.black.name + "(" + players.black.rating + ") : " + sec2hms(board.clock.black);
-  let white_txt = players.white.name + "(" + players.white.rating + ") : " + sec2hms(board.clock.white);
+  //if (playing) console.log(JSON.stringify(board.info));
+  let black_txt = info.black.name + "(" + info.black.rating + ") : " + sec2hms(board.clock.black,info.initial_time);
+  let white_txt = info.white.name + "(" + info.white.rating + ") : " + sec2hms(board.clock.white,info.initial_time);
   ctx.fillText(black_txt, board_dim.board_x + centerText(black_txt,board_dim.board_width),board.black_pov ? bottom_y : top_y);
   ctx.fillText(white_txt, board_dim.board_x + centerText(white_txt,board_dim.board_width),board.black_pov ? top_y : bottom_y);
 }
@@ -380,6 +269,11 @@ function getMoveCoords(move) {
     }
   }
   else return null;
+}
+
+function centerText(text, maxWidth) {
+  let x = (maxWidth / 2) - ctx.measureText(text).width/2;
+  if (x < 0) return 0; else return x;
 }
 
 function inBounds(x,y,rect) {

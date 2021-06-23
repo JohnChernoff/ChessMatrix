@@ -40,9 +40,8 @@ function checkCookie() {
   }
 }
 
-function sec2hms(timect){
-  if(timect=== undefined|| timect===0||timect === null) return '';
-  //timect is seconds, NOT milliseconds
+function sec2hms(timect,init) {
+  if (timect === undefined || timect <=0 || timect === null) timect = init;
   let se=timect % 60; //the remainder after div by 60
   timect = Math.floor(timect/60);
   let mi=timect % 60; //the remainder after div by 60
@@ -52,7 +51,7 @@ function sec2hms(timect){
   return padify (se, mi, hr, dy);
 }
 
-function padify (se, mi, hr, dy){
+function padify(se, mi, hr, dy) {
   hr = hr<10?"0"+hr:hr;
   mi = mi<10?"0"+mi:mi;
   se = se<10?"0"+se:se;
