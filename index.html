@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="no-js" lang="">
+<html class="no-js" lang="" xmlns="http://www.w3.org/1999/html">
 
 <head>
   <meta charset="utf-8">
@@ -28,6 +28,11 @@
   <div id="sidebar">
     <button id = "logButt"  onclick="location.href='http://chernovia.com:8087/auth';" > Lichess Login </button>
     <button id="playButt" onclick="showSeekOptions()">Play</button>
+    <!-- <label for="range_games">Games</label>
+    <input type="range" min="1" max="15" value="8" step="1" class="slider" id="range_games" onchange="setBoards()">
+    -->
+    <label for="boardRangeButt">Boards: </label>
+    <button id = "boardRangeButt" class = "range_butt">X</button>
     <label for="selectScheme">Color Scheme</label>
     <select id="selectScheme" onchange="drawBoards()">
       <option value="COLOR_SCHEME_BLUE_RED">Blue/Red</option>
@@ -40,8 +45,6 @@
     </select>
     <label for="chkShade">Shading</label>
     <input type="checkbox" id="chkShade" onchange="drawBoards()" checked="true">
-    <label for="range_games">Games</label>
-    <input type="range" min="1" max="15" value="8" step="1" class="slider" id="range_games" onchange="setBoards()">
     <label for="chkPieces">Show Pieces</label>
     <input type="checkbox" id="chkPieces" onchange="drawBoards()" checked="true">
     <label for="chkControl">Show Control</label>
@@ -63,70 +66,38 @@
   <div id="modal-seek-overlay" class="modal_overlays">
     <div id="modal-seek-wrap" class="modal_boxes">
       <span class="close" onclick="document.getElementById('modal-seek-overlay').style.display='none'">&times;</span>
-      <div><h2>Create a game</h2>
-          <div class="variant label_select">
-            <label for="sf_variant">Variant</label>
-            <select id="sf_variant" name="variant">
-              <option value="1" title="Standard rules of chess (FIDE)" selected="selected">Standard</option>
-              <option value="2" title="Starting position of the home rank pieces is randomized.">Chess960</option>
-              <option value="4" title="Bring your King to the center to win the game.">King of the Hill</option>
-              <option value="5" title="Check your opponent 3 times to win the game.">Three-check</option>
-              <option value="6" title="Lose all your pieces (or get stalemated) to win the game.">Antichess</option>
-              <option value="8" title="Destroy the horde to win!">Horde</option>
-              <option value="9" title="Race your King to the eighth rank to win.">Racing Kings</option>
-            </select></div><div class="time_mode_config optional_config">
-          <div class="label_select">
-            <label for="sf_timeMode">Time control</label>
-            <select id="sf_timeMode" name="timeMode">
-              <option value="1" selected="selected">Real time</option>
-              <option value="2">Correspondence</option>
-              <option value="0">Unlimited</option>
-            </select>
-          </div>
-          <div class="time_choice range">
-            Minutes per side: <span>3</span>
-            <input name="time" value="3" type="hidden" class="range-value">
-            <input name="time_range" type="range" class="range" min="0" max="38" value="7">
-          </div>
-          <div class="increment_choice range">
-            Increment in seconds: <span>0</span>
-            <input name="increment" value="0" type="hidden" class="range-value">
-            <input name="increment_range" type="range" class="range" min="0" max="30" value="0">
-          </div>
-          <div class="correspondence">
-            <div class="days_choice range" style="display: none;">
-              Days per turn: <span>2</span>
-              <input name="days" value="2" type="hidden" class="range-value">
-              <input name="days_range" type="range" class="range" min="1" max="7" value="2">
-            </div>
-          </div></div>
-          <div class="mode_choice buttons">
-            <group class="radio">
-              <div>
-                <input type="radio" id="sf_mode_0" name="mode" value="0">
-                <label class="required" for="sf_mode_0">Casual</label>
-              </div>
-              <div>
-                <input type="radio" id="sf_mode_1" name="mode" value="1" checked="checked">
-                <label class="required" for="sf_mode_1">Rated</label>
-              </div>
-            </group>
-          </div>
-          <div class="optional_config">
-            <div class="rating-range-config">
-              Rating range
-              <div class="rating-range">
-                <input name="ratingRange" value="1908-2908" type="hidden">
-                <input name="ratingRange_range_min" type="range" class="range rating-range__min" min="-500" max="0" step="50" value="-500">
-                <span class="rating-min">-500</span>
-                /
-                <span class="rating-max">+500</span>
-                <input name="ratingRange_range_max" type="range" class="range rating-range__max" min="0" max="500" step="50" value="500">
-              </div>
-            </div></div>
-          <div class="color-submits">
-            <button title="Random side" class="color-submits__button button button-metal random" name="color" value="random" onclick="seek()"><i></i></button>
-          </div>
+      <h2>Create a game</h2>
+      <div class="variant label_select">
+        <label for="selectVariant">Variant</label>
+        <select id="selectVariant" name="variant">
+          <option value="standard" title="Standard rules of chess (FIDE)" selected="selected">Standard</option>
+          <option value="chess960" title="Starting position of the home rank pieces is randomized.">Chess960</option>
+          <option value="kingOfTheHill" title="Bring your King to the center to win the game.">King of the Hill</option>
+          <option value="threeCheck" title="Check your opponent 3 times to win the game.">Three-check</option>
+          <option value="antichess" title="Lose all your pieces (or get stalemated) to win the game.">Antichess</option>
+          <option value="horde" title="Destroy the horde to win!">Horde</option>
+          <option value="racingKings" title="Race your King to the eighth rank to win.">Racing Kings</option>
+        </select>
+      </div>
+      <div class="mode_choice checkbox">
+        <label for="chkRated">Rated</label>
+        <input type="checkbox" id="chkRated">
+      </div>
+      <div class="time_choice range">
+        <label for="timeRangeButt">Time: </label>
+        <button id = "timeRangeButt" class = "range_butt" ></button>
+        <label for="incRangeButt">Increment: </label>
+        <button id = "incRangeButt" class = "range_butt" ></button>
+      </div>
+      <div class="rating-range">
+        <label for="minRatingRangeButt">Min Rating: </label>
+        <button id = "minRatingRangeButt" class = "range_butt" ></button>
+        <label for="maxRatingRangeButt">Max Rating: </label>
+        <button id = "maxRatingRangeButt" class = "range_butt" ></button>
+      </div>
+      <br>
+      <div class="seek-request">
+        <button id="seekButt" onclick="seek()">Seek</button>
       </div>
     </div>
   </div>
@@ -134,18 +105,19 @@
   <script src="js/vendor/modernizr-3.11.2.min.js"></script>
   <script src="js/vendor/chess.js"></script>
   <script src="js/plugins.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/zug_button.js"></script>
   <script src="js/lichess.js"></script>
   <script src="js/canvas.js"></script>
   <script src="js/Animations.js"></script>
   <script src="js/chess_matrix.js"></script>
+  <script src="js/main.js"></script>
 
-  <!-- Google Analytics: change UA-XXXXX-Y to be your site's ID. -->
+<!-- Google Analytics: change UA-XXXXX-Y to be your site's ID. -->
   <script>
     window.ga = function () { ga.q.push(arguments) }; ga.q = []; ga.l = +new Date;
     ga('create', 'UA-XXXXX-Y', 'auto'); ga('set', 'anonymizeIp', true); ga('set', 'transport', 'beacon'); ga('send', 'pageview')
   </script>
   <script src="https://www.google-analytics.com/analytics.js" async></script>
-</body>
 
+</body>
 </html>

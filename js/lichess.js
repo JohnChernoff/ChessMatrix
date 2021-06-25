@@ -36,7 +36,7 @@ function setOauth() {
 
 function setBoards(type,num) {
   if (type === undefined) type = "blitz";
-  if (num === undefined) num = range_games.valueAsNumber;
+  if (num === undefined) num = board_range_butt_obj.value; //range_games.valueAsNumber;
   console.log("Fetching " + num + " TV Games...");
   let changed = true;
   if (board_list.length < num) {
@@ -270,26 +270,36 @@ function showSeekOptions() {
 }
 
 function seek() {
+  let body_text =
+    "variant=" + document.getElementById("selectVariant").value +
+    "&rated=" + document.getElementById("chkRated").checked +
+    "&time=" + time_range_butt_obj.value +
+    "&increment=" + inc_range_butt_obj.value;
+  console.log("Seeking: " + body_text);
   seek_controller = new AbortController();
   seek_signal = seek_controller.signal;
   document.getElementById("modal-seek-overlay").style.display = 'none';
-  console.log("Seeking...");
   document.getElementById("modal-seeking-overlay").style.display = 'block';
   fetch("https://lichess.org/api/board/seek",{
     method: 'post',
     signal: seek_signal,
     headers: {'Content-Type':'application/x-www-form-urlencoded','Authorization': `Bearer ` + oauth},
-    body: "rated=false&time=2&increment=10"
-  }).then(response => {
-    let seek_reader = response.body.getReader();
-    seek_reader.read().then(function processSeek({ done, value }) {
-      if (!done) {
-        console.log("Seek data: " + value);
-        seek_reader.read().then(processSeek);
-      }
-      else endCurrentSeek();
-    });
-  }).catch(oops => { console.log("seek aborted: " + oops); }); //.finally( function() { endCurrentSeek(); } );
+    body: body_text
+  }).then(response => { //console.log("Status: " + response.status);
+    if (response.status === 200) {
+      let seek_reader = response.body.getReader();
+      seek_reader.read().then(function processSeek({ done, value }) {
+        if (!done) {
+          console.log("Seek data: " + value);
+          seek_reader.read().then(processSeek);
+        }
+        else endCurrentSeek();
+      });
+    }
+    else {
+      endCurrentSeek(); window.setTimeout(() => alert("Bad seek!"),1000);
+    }
+  }).catch(oops => { console.log("seek aborted: " + oops.message); }); //.finally( function() { endCurrentSeek(); } );
 }
 
 function endCurrentSeek() {

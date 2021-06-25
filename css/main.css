@@ -63,7 +63,7 @@ button {
   color: white;
   margin: 15% auto; /* 15% from the top and centered */
   padding: 20px;
-  border: 1px solid yellow;
+  border: 1px solid chartreuse;
   width: 360px; /* Could be more or less, depending on screen size */
 }
 
@@ -80,6 +80,12 @@ button {
   color: black;
   text-decoration: none;
   cursor: pointer;
+}
+
+.range_butt {
+  border-radius: 25px;
+  color: white;
+  background-color: darkslategray;
 }
 
 /*Chrome*/

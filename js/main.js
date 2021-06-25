@@ -1,3 +1,30 @@
+/* TODO:
+    weird animation catchups from tabbing away (?!)
+    drag-move
+    visually indicate logged in status/username, disable playing when not logged in
+    visually indicate turn
+    flip board, resign, offer draw, chat
+    move histories
+    musical events (board = instrument, square = pitch)
+    fancier animations
+    help of some sort
+*/
+
+const board_range_butt_obj = new RangeButton(document.getElementById("boardRangeButt"),1,24,8,1,250,setBoards);
+registerButton(board_range_butt_obj);
+
+const time_range_butt_obj = new RangeButton(document.getElementById("timeRangeButt"),0,60,5,1,250);
+registerButton(time_range_butt_obj);
+
+const inc_range_butt_obj = new RangeButton(document.getElementById("incRangeButt"),0,24,5,1,250);
+registerButton(inc_range_butt_obj);
+
+const max_rating_range_butt_obj = new RangeButton(document.getElementById("maxRatingRangeButt"),0,500,100,50,250);
+registerButton(max_rating_range_butt_obj);
+
+const min_rating_range_butt_obj = new RangeButton(document.getElementById("minRatingRangeButt"),0,500,100,50,250);
+registerButton(min_rating_range_butt_obj);
+
 //console.log(getCookie("oauth"));
 function main() {
   setOauth();

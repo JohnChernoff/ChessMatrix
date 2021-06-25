@@ -1,5 +1,3 @@
-//TODO: weird animation catchups from tabbing away
-
 const RED = 0, GREEN = 1, BLUE = 2;
 let range_games = document.getElementById("range_games");
 let chk_shade = document.getElementById("chkShade");
