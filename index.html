@@ -69,7 +69,7 @@
       <h2>Create a game</h2>
       <div class="variant label_select">
         <label for="selectVariant">Variant</label>
-        <select id="selectVariant" name="variant">
+        <select id="selectVariant" name="variant" onchange="updateRatings(true)">
           <option value="standard" title="Standard rules of chess (FIDE)" selected="selected">Standard</option>
           <option value="chess960" title="Starting position of the home rank pieces is randomized.">Chess960</option>
           <option value="kingOfTheHill" title="Bring your King to the center to win the game.">King of the Hill</option>
@@ -89,6 +89,9 @@
         <label for="incRangeButt">Increment: </label>
         <button id = "incRangeButt" class = "range_butt" ></button>
       </div>
+      <div>
+        <p id="seekType"></p>
+      </div>
       <div class="rating-range">
         <label for="minRatingRangeButt">Min Rating: </label>
         <button id = "minRatingRangeButt" class = "range_butt" ></button>
@@ -106,11 +109,13 @@
   <script src="js/vendor/chess.js"></script>
   <script src="js/plugins.js"></script>
   <script src="js/zug_button.js"></script>
-  <script src="js/lichess.js"></script>
-  <script src="js/canvas.js"></script>
   <script src="js/Animations.js"></script>
   <script src="js/chess_matrix.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/lichess.js"></script>
+  <script src="js/canvas.js"></script>
+
+
 
 <!-- Google Analytics: change UA-XXXXX-Y to be your site's ID. -->
   <script>

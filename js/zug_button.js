@@ -39,11 +39,18 @@ function RangeButton(e,min,max,def,i,spd,f) {
   e.innerHTML = def;
   this.speed = spd;
   this.click_fun = f;
-  this.advance = function(v) {
+
+  this.advance = v => {
     this.value += v;
     if (this.value < this.min_value) this.value = this.max_value;
     else if (this.value > this.max_value) this.value = this.min_value;
     this.element.innerHTML = this.value;
   }
+
+  this.setValue = v => {
+    this.value = v;
+    this.element.innerHTML = v;
+  }
+
 };
 

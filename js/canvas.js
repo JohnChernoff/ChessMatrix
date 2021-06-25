@@ -81,11 +81,9 @@ function clearScreen() {
   ctx.fillRect(0,0,canvas.width,canvas.height);
 }
 
-
-
 function fitBoardsToScreen() { //console.trace();
   //num_boards = range_games.valueAsNumber; console.log("Games: " + board_list.length);
-  board_queue = [];
+  board_queue = [];  unfitted = false;
   let n = Math.floor(Math.sqrt(board_list.length));
   let board_num = 0;
   let long_length = canvas.width > canvas.height ? canvas.width : canvas.height; //TODO: use Math.min,max
@@ -100,10 +98,10 @@ function fitBoardsToScreen() { //console.trace();
     for (let i = 0; i<cols; i++) {
       if (canvas.width > canvas.height) board_list[board_num].canvas_loc = { x: padding1 * i , y: padding2 * row };
       else board_list[board_num].canvas_loc = { y: padding2 * row , x: padding1 * i };
-      if (++board_num >= board_list.length) break;
+      if (++board_num >= board_list.length) return;
+      else console.log("Fitting Board #" + board_num + " : " + board_list[board_num]);
     }
   }
-  unfitted = false;
 }
 
 function boardLoop() {

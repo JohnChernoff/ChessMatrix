@@ -8,10 +8,12 @@ let play_board = null;
 let lich_sock = null;
 let msg_loop = null;
 let oauth = null;
-let seek_controller, seek_signal;
+let seek_controller = null;
+let seek_signal = null;
 let logged_in = false;
 let watching = false;
 let playing = false;
+let current_tc = "rapid";
 
 function setOauth() {
   oauth = window.location.search.substr(1);
@@ -21,17 +23,17 @@ function setOauth() {
     oauth = token;
     window.history.replaceState({}, document.title,window.location.href.split('?')[0]);
   }
-  else {
-    oauth = getCookie("oauth");
-  }
-  if (oauth.length > 0) {
-    logged_in = true;
-    fetch("https://lichess.org/api/account",{
-      method: "get",
-      headers:{ 'Accept':'application/json', 'Authorization': `Bearer ` + oauth }
-    }).then(result => result.json()).then(json => { user_name = json.username; getEvents(); });
-  }
+  else  oauth = getCookie("oauth");
+  if (oauth.length > 0) getUserInfo().then(json => { user_name = json.username; getEvents(); });
   else console.log("Bad oauth, augh");
+}
+
+function getUserInfo() {
+  logged_in = true;
+  return fetch("https://lichess.org/api/account",{
+    method: "get",
+    headers:{ 'Accept':'application/json', 'Authorization': `Bearer ` + oauth }
+  }).then(result => result.json());
 }
 
 function setBoards(type,num) {
@@ -267,19 +269,59 @@ const readStream = processLine => response => {
 
 function showSeekOptions() {
   document.getElementById("modal-seek-overlay").style.display = 'block';
+  updateRatings(true);
+}
+
+function getTimeControl(initial,inc) {
+  let n = initial + (40 * inc);
+  if (n < 29) return "ultraBullet";
+  else if (n < 179) return "bullet";
+  else if (n < 479) return "blitz";
+  else if (n < 1499) return "rapid";
+  else return "classical";
+}
+
+function updateRatings(force) { //console.log("Update: ");
+  let variant = document.getElementById("selectVariant").value;
+  let tc = getTimeControl(time_range_butt_obj.value * 60,inc_range_butt_obj.value);
+  if (!force && (variant !== "standard" || current_tc === tc)) return;
+  console.log("Updating ratings...");
+  current_tc = tc;
+  getRating(variant,tc)
+    .then(rating => {
+    min_rating_range_butt_obj.setValue(rating-400);
+    max_rating_range_butt_obj.setValue(rating+400);
+    document.getElementById("seekType").innerText = "Rating: " + rating + ", Time Control: " + tc;
+  });
+}
+
+function getRating(variant,time_control) {
+  if (variant !== "standard") time_control = variant;
+  return getUserInfo().then(info => info.perfs[time_control].rating);
 }
 
 function seek() {
-  let body_text =
-    "variant=" + document.getElementById("selectVariant").value +
-    "&rated=" + document.getElementById("chkRated").checked +
-    "&time=" + time_range_butt_obj.value +
-    "&increment=" + inc_range_butt_obj.value;
+  document.getElementById("modal-seek-overlay").style.display = 'none';
+  document.getElementById("modal-seeking-overlay").style.display = 'block';
+  let minutes = time_range_butt_obj.value;
+  let inc = inc_range_butt_obj.value;
+  let time_control = getTimeControl(minutes * 60,inc);
+  if (time_control !== "rapid" && time_control !== "classical") endCurrentSeek("Bad time control: " + time_control);
+  else {
+    let variant = document.getElementById("selectVariant").value;
+    let rated = document.getElementById("chkRated").checked;
+    let min_rating = min_rating_range_butt_obj.value;
+    let max_rating = max_rating_range_butt_obj.value;
+    getRating(variant, time_control).then(rating => seekGame(variant, minutes, inc, rated, min_rating, max_rating));
+  }
+}
+
+function seekGame(variant,minutes,inc,rated,min_rating,max_rating) {  //console.log("Rating: " + rating);
+  let body_text = "variant=" + variant + "&rated=" + rated + "&time=" + minutes + "&increment=" + inc + "&ratingRange=" + min_rating + "-" + max_rating;
   console.log("Seeking: " + body_text);
   seek_controller = new AbortController();
   seek_signal = seek_controller.signal;
-  document.getElementById("modal-seek-overlay").style.display = 'none';
-  document.getElementById("modal-seeking-overlay").style.display = 'block';
+
   fetch("https://lichess.org/api/board/seek",{
     method: 'post',
     signal: seek_signal,
@@ -293,18 +335,19 @@ function seek() {
           console.log("Seek data: " + value);
           seek_reader.read().then(processSeek);
         }
-        else endCurrentSeek();
+        else endCurrentSeek("Bad Seek!");
       });
     }
     else {
-      endCurrentSeek(); window.setTimeout(() => alert("Bad seek!"),1000);
+      endCurrentSeek();
     }
   }).catch(oops => { console.log("seek aborted: " + oops.message); }); //.finally( function() { endCurrentSeek(); } );
 }
 
-function endCurrentSeek() {
+function endCurrentSeek(msg) {
   document.getElementById("modal-seeking-overlay").style.display = 'none';
-  seek_controller.abort();
+  if (seek_controller !== null) seek_controller.abort();
+  if (msg !== undefined) window.setTimeout(() => alert(msg),1000);
 }
 
 function makeMove(move) {

@@ -1,5 +1,5 @@
 /* TODO:
-    weird animation catchups from tabbing away (?!)
+    weird bugs/animation catchups from tabbing away or lichess socket closing
     drag-move
     visually indicate logged in status/username, disable playing when not logged in
     visually indicate turn
@@ -10,23 +10,26 @@
     help of some sort
 */
 
-const board_range_butt_obj = new RangeButton(document.getElementById("boardRangeButt"),1,24,8,1,250,setBoards);
-registerButton(board_range_butt_obj);
-
-const time_range_butt_obj = new RangeButton(document.getElementById("timeRangeButt"),0,60,5,1,250);
-registerButton(time_range_butt_obj);
-
-const inc_range_butt_obj = new RangeButton(document.getElementById("incRangeButt"),0,24,5,1,250);
-registerButton(inc_range_butt_obj);
-
-const max_rating_range_butt_obj = new RangeButton(document.getElementById("maxRatingRangeButt"),0,500,100,50,250);
-registerButton(max_rating_range_butt_obj);
-
-const min_rating_range_butt_obj = new RangeButton(document.getElementById("minRatingRangeButt"),0,500,100,50,250);
-registerButton(min_rating_range_butt_obj);
+let board_range_butt_obj, time_range_butt_obj, inc_range_butt_obj, max_rating_range_butt_obj, min_rating_range_butt_obj;
 
 //console.log(getCookie("oauth"));
 function main() {
+
+  board_range_butt_obj = new RangeButton(document.getElementById("boardRangeButt"),1,24,8,1,250,setBoards);
+  registerButton(board_range_butt_obj);
+
+  time_range_butt_obj = new RangeButton(document.getElementById("timeRangeButt"),0,60,5,1,250,updateRatings);
+  registerButton(time_range_butt_obj);
+
+  inc_range_butt_obj = new RangeButton(document.getElementById("incRangeButt"),0,24,5,1,250,updateRatings);
+  registerButton(inc_range_butt_obj);
+
+  max_rating_range_butt_obj = new RangeButton(document.getElementById("maxRatingRangeButt"),1000,3000,1500,50,250);
+  registerButton(max_rating_range_butt_obj);
+
+  min_rating_range_butt_obj = new RangeButton(document.getElementById("minRatingRangeButt"),1000,3000,1500,50,250);
+  registerButton(min_rating_range_butt_obj);
+
   setOauth();
   if (oauth.length > 0) document.getElementById("logButt").innerText ="Lichess relog";
   resize();
