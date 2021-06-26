@@ -1,7 +1,8 @@
 function animateBoard(board,board_dim) {
   //animateBigLife(board,board_dim);
-  animateBoardLife(board,board_dim);
+  //animateBoardLife(board,board_dim);
   //animateBoardMosh(board,board_dim);
+  animateHodge(board,board_dim);
 }
 
 function animateBoardMosh(board,board_dim) {
@@ -11,12 +12,7 @@ function animateBoardMosh(board,board_dim) {
   board.matrix[rx][ry].control = getControl(rx,ry,board);
   board.matrix[rx][ry].color = getColor(board.matrix[rx][ry]);
   linearInterpolateBoard(board.matrix,board_dim);
-  ctx.fillStyle = rndColor();
-  ctx.font = 'bold ' + (board_dim.board_height/12) + 'px fixedsys';
-  ctx.fillText("Winner: ",
-    board.canvas_loc.x + centerText("winner",board_dim.board_width), board.canvas_loc.y + board_dim.board_height/3);
-  ctx.fillText(board.winner,
-    board.canvas_loc.x + centerText(board.winner,board_dim.board_width), board.canvas_loc.y + board_dim.board_height/1.5);
+  showWinner(board,board_dim);
 }
 
 function animateBoardLife(board,board_dim) {
@@ -53,6 +49,7 @@ function animateBoardLife(board,board_dim) {
   linearInterpolateBoard(board.matrix,board_dim); //drawSquares(board.matrix,board_dim.,false,true,false);
   //drawSquares(board.matrix,getBoardDim(board),false,true,true);
   nextTick(board.square_cells,board.square_tmp_cells,128,isAliveChess);
+  showWinner(board,board_dim);
 }
 
 function animateBigLife(board,board_dim) {
@@ -72,6 +69,7 @@ function animateBigLife(board,board_dim) {
   nextTick(board.big_cells,board.big_tmp_cells,255,isAlive);
   updateBigLife(board.big_cells,board.big_tmp_cells,board.pixels);
   ctx.putImageData(board.pixels,board_dim.board_x,board_dim.board_y);
+  showWinner(board,board_dim);
 }
 
 function updateBigLife(cells,tmp_cells,pixels) {
@@ -124,5 +122,88 @@ function isAlive(cell,neighbours,max_age) {
 
 function isAliveChess(cell,neighbours,max_age) {
   if (cell.alive) return (neighbours > 1 && neighbours < 4 && cell.age < max_age);
-  else return (Math.abs(cell.control) > 1 || neighbours == 3 || cell.age > max_age);
+  else return (Math.abs(cell.control) > 1 || neighbours === 3 || cell.age > max_age);
+}
+
+function showWinner(board, board_dim) {
+  ctx.fillStyle = "blue" //rndColor();
+  ctx.font = 'bold ' + (board_dim.board_height/12) + 'px fixedsys';
+  ctx.fillText("Winner: ",
+    board.canvas_loc.x + centerText("winner",board_dim.board_width), board.canvas_loc.y + board_dim.board_height/3);
+  ctx.fillText(board.winner,
+    board.canvas_loc.x + centerText(board.winner,board_dim.board_width), board.canvas_loc.y + board_dim.board_height/1.5);
+}
+
+function animateHodge(board,board_dim) {
+  if (board.hodge === undefined) {
+    board.hodge = true; board.hodge_mat = []; board.tmp_hodge_mat = [];
+    board.pixels = ctx.getImageData(board_dim.board_x,board_dim.board_y,board_dim.board_width,board_dim.board_height);
+    for (let x=0;x<board.pixels.width;x++) {
+      board.hodge_mat[x] = []; board.tmp_hodge_mat[x] = [];
+      for (let y=0;y<board.pixels.height;y++) {
+        board.hodge_mat[x][y] = []; board.tmp_hodge_mat[x][y] = [];
+        for (let c=0;c<3;c++) {
+          board.hodge_mat[x][y][c] = board.pixels.data[((y * board.pixels.width + x) * 4) + c];
+          board.tmp_hodge_mat[x][y][c] = board.hodge_mat[x][y][c];
+        }
+      }
+    }
+  }
+  nextHodgeTick(board.pixels,board.hodge_mat,board.tmp_hodge_mat,7,7,1);
+  ctx.putImageData(board.pixels,board_dim.board_x,board_dim.board_y);
+}
+
+function nextHodgeTick(pixels,cells,tmp_cells,k1,k2,g) {
+  let hodge_range = 255, minX = 0, minY = 0, maxX = cells.length-1, maxY = cells[0].length-1;
+
+  for (let x = minX; x <= maxX; x++) {
+    for (let y = minY; y <= maxY; y++) {
+      for (let c = 0; c < 3; c++) {
+        if (cells[x][y][c] === 0) {
+          let A = 0, B = 0;
+          for (let i = x - 1; i <= x + 1; i++)
+            for (let j = y - 1; j <= y + 1; j++) {
+              let i2 = i, j2 = j;
+              if (i2 < 0) i2 = maxX; else if (i2 >= maxX) i2 = minX;
+              if (j2 < 0) j2 = maxY; else if (j2 >= maxY) j2 = minY;
+              if (i2 !== x || j2 !== y) {
+                if (cells[i2][j2][c] > 0) A++; else if (cells[i2][j2][c] === 0) B++;
+              }
+            }
+          tmp_cells[x][y][c] = Math.floor(A/k1) + Math.floor(B/k2); //parseInt(A / k1) + parseInt(B / k2);
+          if (tmp_cells[x][y][c] > hodge_range) tmp_cells[x][y][c] = hodge_range;
+        }
+        else if (cells[x][y][c] < hodge_range) {
+          let A = 1, S = cells[x][y][c];
+          for (let i = x - 1; i <= x + 1; i++) {
+            for (let j = y - 1; j <= y + 1; j++) {
+              let i2 = i, j2 = j;
+              if (i2 < 0) i2 = maxX; else if (i2 >= maxX) i2 = minX;
+              if (j2 < 0) j2 = maxY; else if (j2 >= maxY) j2 = minY;
+              if (i2 !== x || j2 !== y) {
+                if (cells[i2][j2][c] > 0) {
+                  A++;
+                  S += cells[i2][j2][c];
+                }
+              }
+            }
+          }
+          tmp_cells[x][y][c] = Math.floor(S/A) + g; //parseInt(S / A) + g;
+          if (tmp_cells[x][y][c] > hodge_range) tmp_cells[x][y][c] = hodge_range;
+        }
+        else tmp_cells[x][y][c] = 0;
+      }
+    }
+  }
+  //update cells
+  for (let x=0; x <= maxX; x++) {
+    for (let y = 0; y <= maxY; y++) {
+      let pixel = ((y * (pixels.width * 4)) + (x * 4));
+      pixels.data[pixel + 3] = 255; //transparent pixel
+      for (let c = 0; c < 3; c++) {
+        cells[x][y][c] = Math.floor(tmp_cells[x][y][c]);
+        pixels.data[pixel + c] = cells[x][y][c];
+      }
+    }
+  }
 }

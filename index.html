@@ -26,8 +26,8 @@
 
   <!-- Add your site or application content here -->
   <div id="sidebar">
-    <button id = "logButt"  onclick="location.href='http://chernovia.com:8087/auth';" > Lichess Login </button>
-    <button id="playButt" onclick="showSeekOptions()">Play</button>
+    <button id="logButt"  onclick="location.href='http://chernovia.com:8087/auth';" > Lichess Login </button>
+    <button id="playButt" class="lobby_cmds" onclick="showSeekOptions()">Play</button>
     <!-- <label for="range_games">Games</label>
     <input type="range" min="1" max="15" value="8" step="1" class="slider" id="range_games" onchange="setBoards()">
     -->
@@ -49,6 +49,8 @@
     <input type="checkbox" id="chkPieces" onchange="drawBoards()" checked="true">
     <label for="chkControl">Show Control</label>
     <input type="checkbox" id="chkControl" onchange="drawBoards()">
+    <button id="drawButt" class="play_cmds" onclick="offerDraw()"> Draw </button>
+    <button id="resignButt" class="play_cmds" onclick="resign()"> Resign </button>
     <br><br>
   </div>
 

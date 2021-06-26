@@ -14,7 +14,7 @@ let background_color = "black";
 let from_click = null, to_click = null;
 let status_percent = 10;
 let board_queue = [];
-let anim_test = false;
+let anim_test = true;
 
 for (let i=0; i<6; i++) {
   piece_imgs[i] = { black: new Image(), white: new Image() }; //onload?
@@ -204,7 +204,7 @@ function drawStatus(board,board_dim) {
   ctx.fillStyle = "orange";
   ctx.fillRect(board_dim.board_x,board_dim.board_y - board_dim.sz2,board_dim.board_width,board_dim.sz2);
   ctx.fillRect(board_dim.board_x,board_dim.board_y + board_dim.board_height,board_dim.board_width,board_dim.sz2);
-  let info = getInfo(board);
+  let info = getBoardInfo(board);
   ctx.fillStyle = "black";
   ctx.font = 'bold ' + (board_dim.sz2/1.5) + 'px fixedsys'; let fontpad = board_dim.sz2/4;
   let top_y = board_dim.board_y - fontpad, bottom_y = (board_dim.board_y + board_dim.sz2 + board_dim.board_height) - fontpad;

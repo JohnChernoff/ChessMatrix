@@ -14,6 +14,9 @@ let logged_in = false;
 let watching = false;
 let playing = false;
 let current_tc = "rapid";
+let draw_button = document.getElementById("drawButt");
+let resign_button = document.getElementById("resignButt");
+let resurrect = true;
 
 function setOauth() {
   oauth = window.location.search.substr(1);
@@ -146,12 +149,12 @@ function send(sock, message) {
 }
 
 function setWinner(data,board) { //console.log("Winner: " + JSON.stringify(data));
-  let info = getInfo(board);
+  let info = getBoardInfo(board);
   switch (data.d.win) {
     case "w": board.winner = info.white.name; break;
     case "b": board.winner = info.black.name; break;
     case "null": board.winner = "draw/abort"; break;
-    default:  board.winner = "???";
+    default:  board.winner = "no winner";
   }
   clearInterval(board.timer);
   board_queue.push(board);
@@ -170,16 +173,14 @@ function runLichessSocket() { //document.getElementById("sockButt").innerText = 
     setBoards();
   }
 
-  lich_sock.onerror = function (error) { console.error("Oops: " + error); }
+  lich_sock.onerror = e => console.error("Oops: " + e);
 
-  //lich_sock.onmessage = function (e) { newObservation(e); }
   lich_sock.onmessage = e => newObservation(e);
 
-  lich_sock.onclose = function () { //document.getElementById("sockButt").innerText = "Start";
+  lich_sock.onclose = function () {
     console.log("Socket closed");
-    clearInterval(msg_loop);
-    lich_sock = null;
-    for (let i=0; i<board_list.length; i++) clearBoard(board_list[i]);
+    //clearInterval(msg_loop); lich_sock = null; for (let i=0; i<board_list.length; i++) clearBoard(board_list[i]);
+    if (resurrect) runLichessSocket();
   }
 
 }
@@ -231,7 +232,13 @@ function processPlay(event) { //console.log("Play Event: " + JSON.stringify(even
 
 function setPlaying(bool) { //console.log("Playing: " + playing); clearScreen();
   playing = bool;
-  if (!playing) {
+  if (playing) {
+    let cmds = document.getElementsByClassName("play_cmds");
+    for (let i=0;i<cmds.length;i++) cmds[i].style.display = "inline";
+  }
+  else {
+    let cmds = document.getElementsByClassName("play_cmds");
+    for (let i=0;i<cmds.length;i++) cmds[i].style.display = "none";
     clearBoard(play_board); setBoards();
   }
   drawBoards();
@@ -317,7 +324,7 @@ function seek() {
 }
 
 function seekGame(variant,minutes,inc,rated,min_rating,max_rating) {  //console.log("Rating: " + rating);
-  let body_text = "variant=" + variant + "&rated=" + rated + "&time=" + minutes + "&increment=" + inc + "&ratingRange=" + min_rating + "-" + max_rating;
+  let body_text = "variant=" + variant + "&rated=" + rated + "&time=" + minutes + "&increment=" + inc; // + "&ratingRange=" + min_rating + "-" + max_rating;
   console.log("Seeking: " + body_text);
   seek_controller = new AbortController();
   seek_signal = seek_controller.signal;
@@ -335,11 +342,11 @@ function seekGame(variant,minutes,inc,rated,min_rating,max_rating) {  //console.
           console.log("Seek data: " + value);
           seek_reader.read().then(processSeek);
         }
-        else endCurrentSeek("Bad Seek!");
+        else endCurrentSeek();
       });
     }
     else {
-      endCurrentSeek();
+      endCurrentSeek("Bad Seek!");
     }
   }).catch(oops => { console.log("seek aborted: " + oops.message); }); //.finally( function() { endCurrentSeek(); } );
 }
@@ -350,14 +357,19 @@ function endCurrentSeek(msg) {
   if (msg !== undefined) window.setTimeout(() => alert(msg),1000);
 }
 
-function makeMove(move) {
-  fetch("https://lichess.org/api/board/game/" + play_board.info.id + "/move/" + move, {
+function chessCmd(endpt) {
+  if (!playing) { alert("Not playing!"); return; } //shouldn't occur
+  fetch("https://lichess.org/api/board/game/" + play_board.info.id + endpt, {
     method: 'post',
     headers: {'Authorization': `Bearer ` + oauth}
   }).then(res => res.text().then(text => console.log(text)));
 }
 
-function getInfo(board) { //TODO: fix this yucky kludge
+function makeMove(move) { chessCmd("/move/" + move); }
+function offerDraw() { chessCmd("/draw/yes"); }
+function resign() { chessCmd("/resign"); }
+
+function getBoardInfo(board) { //TODO: fix this yucky kludge
   let black_player = {
     name : board.playing ? board.info.black.name : board.info.players.black.user.id,
     rating : board.playing ? board.info.black.rating : board.info.players.black.rating,
@@ -374,6 +386,8 @@ function getInfo(board) { //TODO: fix this yucky kludge
 }
 
 function getPlayString(board) {
-  let info = getInfo(board);
+  let info = getBoardInfo(board);
   return info.white.name + " - " + info.black.name;
 }
+
+
