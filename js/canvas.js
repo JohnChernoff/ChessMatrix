@@ -14,7 +14,7 @@ let background_color = "black";
 let from_click = null, to_click = null;
 let status_percent = 10;
 let board_queue = [];
-let anim_test = true;
+let anim_test = false;
 
 for (let i=0; i<6; i++) {
   piece_imgs[i] = { black: new Image(), white: new Image() }; //onload?

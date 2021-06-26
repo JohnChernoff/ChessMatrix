@@ -135,27 +135,26 @@ function showWinner(board, board_dim) {
 }
 
 function animateHodge(board,board_dim) {
-  if (board.hodge === undefined) {
-    board.hodge = true; board.hodge_mat = []; board.tmp_hodge_mat = [];
-    board.pixels = ctx.getImageData(board_dim.board_x,board_dim.board_y,board_dim.board_width,board_dim.board_height);
-    for (let x=0;x<board.pixels.width;x++) {
-      board.hodge_mat[x] = []; board.tmp_hodge_mat[x] = [];
-      for (let y=0;y<board.pixels.height;y++) {
-        board.hodge_mat[x][y] = []; board.tmp_hodge_mat[x][y] = [];
-        for (let c=0;c<3;c++) {
-          board.hodge_mat[x][y][c] = board.pixels.data[((y * board.pixels.width + x) * 4) + c];
-          board.tmp_hodge_mat[x][y][c] = board.hodge_mat[x][y][c];
-        }
+  if (board.hodge === undefined) { board.hodge_mat = []; board.tmp_hodge_mat = []; }
+  board.pixels = ctx.getImageData(board_dim.board_x,board_dim.board_y,board_dim.board_width,board_dim.board_height);
+  for (let x=0;x<board.pixels.width;x++) {
+    if (board.hodge === undefined) { board.hodge_mat[x] = []; board.tmp_hodge_mat[x] = []; }
+    for (let y=0;y<board.pixels.height;y++) {
+      if (board.hodge === undefined) { board.hodge_mat[x][y] = []; board.tmp_hodge_mat[x][y] = []; }
+      for (let c=0;c<3;c++) {
+        board.hodge_mat[x][y][c] = board.pixels.data[((y * board.pixels.width + x) * 4) + c];
+        if (board.hodge === undefined) { board.tmp_hodge_mat[x][y][c] = board.hodge_mat[x][y][c]; }
       }
     }
   }
-  nextHodgeTick(board.pixels,board.hodge_mat,board.tmp_hodge_mat,7,7,1);
+  board.hodge = true;
+  nextHodgeTick(board.pixels,board.hodge_mat,board.tmp_hodge_mat,7,7,2);
   ctx.putImageData(board.pixels,board_dim.board_x,board_dim.board_y);
+  drawSquares(board.matrix,board_dim,false,true,false);
 }
 
 function nextHodgeTick(pixels,cells,tmp_cells,k1,k2,g) {
   let hodge_range = 255, minX = 0, minY = 0, maxX = cells.length-1, maxY = cells[0].length-1;
-
   for (let x = minX; x <= maxX; x++) {
     for (let y = minY; y <= maxY; y++) {
       for (let c = 0; c < 3; c++) {
@@ -201,8 +200,8 @@ function nextHodgeTick(pixels,cells,tmp_cells,k1,k2,g) {
       let pixel = ((y * (pixels.width * 4)) + (x * 4));
       pixels.data[pixel + 3] = 255; //transparent pixel
       for (let c = 0; c < 3; c++) {
-        cells[x][y][c] = Math.floor(tmp_cells[x][y][c]);
-        pixels.data[pixel + c] = cells[x][y][c];
+        //cells[x][y][c] = Math.floor(tmp_cells[x][y][c]); pixels.data[pixel + c] = cells[x][y][c];
+        pixels.data[pixel + c] = tmp_cells[x][y][c];
       }
     }
   }
