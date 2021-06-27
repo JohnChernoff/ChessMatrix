@@ -32,7 +32,6 @@ function RangeButton(e,min,max,def,i,spd,f) {
   this.element = e;
   this.min_value = min;
   this.max_value = max;
-  this.initial_value = def;
   this.value = def;
   this.changing = false;
   this.increment = i;
@@ -52,5 +51,5 @@ function RangeButton(e,min,max,def,i,spd,f) {
     this.element.innerHTML = v;
   }
 
-};
+}
 

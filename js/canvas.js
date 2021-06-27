@@ -269,23 +269,6 @@ function drawSquares(matrix,board_dim,blocks,pieces,control,grid) { //console.lo
       }
     }
   }
-  if (false) {
-    ctx.strokeStyle = "rgb(128,128,128)";
-    for (let y = 0; y <= 8; y++) {
-      let y1 = board_dim.board_y + (y * board_dim.square_height);
-      ctx.beginPath();
-      ctx.moveTo(board_dim.board_x,y1);
-      ctx.lineTo(board_dim.board_x + board_dim.board_width,y1);
-      ctx.stroke();
-    }
-    for (let x = 0; x <= 8; x++) {
-      let x1 = board_dim.board_x + (x * board_dim.square_width);
-      ctx.beginPath();
-      ctx.moveTo(x1,board_dim.board_y);
-      ctx.lineTo(x1,board_dim.board_y + board_dim.board_height);
-      ctx.stroke();
-    }
-  }
 }
 
 function getAlgebraic(x,y) {

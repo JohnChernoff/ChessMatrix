@@ -2,7 +2,6 @@
     weird bugs/animation catchups from tabbing away or lichess socket closing
     drag-move
     visually indicate logged in status/username, disable playing when not logged in
-    visually indicate turn
     flip board, accept draw, chat
     move histories
     musical events (board = instrument, square = pitch)
@@ -10,7 +9,7 @@
     help of some sort
 */
 
-let board_range_butt_obj, time_range_butt_obj, inc_range_butt_obj, max_rating_range_butt_obj, min_rating_range_butt_obj,
+let time_range_butt_obj, inc_range_butt_obj, max_rating_range_butt_obj, min_rating_range_butt_obj,
 hodge_var1_butt_obj,hodge_var2_butt_obj,hodge_var3_butt_obj;
 
 //console.log(getCookie("oauth"));
