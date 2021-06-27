@@ -10,7 +10,8 @@
     help of some sort
 */
 
-let board_range_butt_obj, time_range_butt_obj, inc_range_butt_obj, max_rating_range_butt_obj, min_rating_range_butt_obj;
+let board_range_butt_obj, time_range_butt_obj, inc_range_butt_obj, max_rating_range_butt_obj, min_rating_range_butt_obj,
+hodge_var1_butt_obj,hodge_var2_butt_obj,hodge_var3_butt_obj;
 
 //console.log(getCookie("oauth"));
 function main() {
@@ -29,6 +30,15 @@ function main() {
 
   min_rating_range_butt_obj = new RangeButton(document.getElementById("minRatingRangeButt"),1000,3000,1500,50,250);
   registerButton(min_rating_range_butt_obj);
+
+  hodge_var1_butt_obj = new RangeButton(document.getElementById("hodgeVar1Butt"),1,32,7,1,250);
+  registerButton(hodge_var1_butt_obj);
+
+  hodge_var2_butt_obj = new RangeButton(document.getElementById("hodgeVar2Butt"),1,32,7,1,250);
+  registerButton(hodge_var2_butt_obj);
+
+  hodge_var3_butt_obj = new RangeButton(document.getElementById("hodgeVar3Butt"),1,64,7,1,250);
+  registerButton(hodge_var3_butt_obj);
 
   setOauth();
   if (oauth.length > 0) document.getElementById("logButt").innerText ="Lichess relog";

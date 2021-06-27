@@ -139,66 +139,65 @@ function animateHodge(board,board_dim) {
     board.hodge = true;
     board.tmp_pix = [];
   }
-  nextHodgeTick(board.pixels,board.tmp_pix,7,7,7, false);
+  nextHodgeTick(board.pixels,board.tmp_pix,
+    hodge_var1_butt_obj.value,hodge_var2_butt_obj.value,hodge_var3_butt_obj.value, false);
   ctx.putImageData(board.pixels,board_dim.board_x,board_dim.board_y);
   drawSquares(board.matrix,board_dim,false,true,false,false);
   showWinner(board,board_dim,"blue");
 }
 
-function nextHodgeTick(pixels,tmp_pix,k1,k2,g, mono) { //let tmp_pix = pixels.data.slice();
-  let hodge_range = 255;
-  let colors = (mono ? 1 : 3);
-  let pix = 0,A,B,S,n;
-  let pix_row = pixels.width * 4;
-  for (let px = 0; px <= pixels.data.length; px += 4) {
-    tmp_pix[px + 3] = 255;
-    for (let c = 0; c < colors; c++) {
-      pix = px + c;
-      if (pixels.data[pix] === 0) {
-        A = 0; B = 0;
-        for (let y = -pix_row; y <= pix_row + 1; y += pix_row) {
-          n = pix + y;
-          if (n < 0) n = pixels.data.length + n;
-          else if (n > pixels.data.length) n = n - pixels.data.length;
-          for (let x = -4; x <= 4; x += 4) {
-            if (x !== 0 || y !== 0) {
-              let row = Math.floor(n / pix_row);
-              n += x;
-              let row_shift = (Math.floor(n / pix_row)) - row;
-              if (row_shift !== 0) n += (pix_row * row_shift);
-              if (pixels.data[n] > 0) A++; else if (pixels.data[n] === 0) B++;
-            }
-          }
-        }
-        tmp_pix[pix] = Math.floor(A/k1) + Math.floor(B/k2);
-        if (tmp_pix[pix] > hodge_range) tmp_pix[pix] = hodge_range;
-      }
-      else if (pixels.data[pix] < hodge_range) {
-        A = 1; S = pixels.data[pix];
-        for (let y = -pix_row; y <= pix_row + 1; y += pix_row) {
-          n = pix + y;
-          if (n < 0) n = pixels.data.length + n;
-          else if (n > pixels.data.length) n = n - pixels.data.length;
-          for (let x = -4; x <= 4; x += 4) {
-            if (x !== 0 || y !== 0) {
-              let row = Math.floor(n / pix_row);
-              n += x;
-              let row_shift = (Math.floor(n / pix_row)) - row;
-              if (row_shift !== 0) n += (pix_row * row_shift);
-              if (pixels.data[n] > 0) {
-                A++; S += pixels.data[n];
+function nextHodgeTick(pixels,tmp_cells,k1,k2,g, mono) {
+  let hodge_range = 255, minX = 0, minY = 0, maxX = pixels.width-1, maxY = pixels.width-1;
+  let px = 0, pix = 0, n = 0, nx = 0, ny = 0, A = 0, B = 0, S = 0;
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      tmp_cells[px + 3] = 255;
+      for (let c = 0; c < 3; c++) {
+        pix = px + c;
+        if (pixels.data[pix] === 0) {
+          A = 0; B = 0;
+          for (let i = x - 1; i <= x + 1; i++) {
+            for (let j = y - 1; j <= y + 1; j++) {
+              nx = i; ny = j;
+              if (nx < 0) nx = maxX; else if (nx >= maxX) nx = minX;
+              if (ny < 0) ny = maxY; else if (ny >= maxY) ny = minY;
+              if (nx !== x || ny !== y) {
+                n = (ny * (pixels.width * 4)) + (nx * 4) + c;
+                if (pixels.data[n] > 0) A++; else if (pixels.data[n] === 0) B++; //eeh
               }
             }
           }
+          tmp_cells[pix] = Math.floor(A/k1) + Math.floor(B/k2);
+          if (tmp_cells[pix] > hodge_range) tmp_cells[pix] = hodge_range;
         }
-        tmp_pix[pix] = Math.floor(S/A) + g;
-        if (tmp_pix[pix] > hodge_range) tmp_pix[pix] = hodge_range;
+        else if (pixels.data[pix] < hodge_range) {
+          A = 1; S = pixels.data[pix];
+          for (let i = x - 1; i <= x + 1; i++) {
+            for (let j = y - 1; j <= y + 1; j++) {
+              nx = i; ny = j;
+              if (nx < 0) nx = maxX; else if (nx >= maxX) nx = minX;
+              if (ny < 0) ny = maxY; else if (ny >= maxY) ny = minY;
+              if (nx !== x || ny !== y) {
+                n = (ny * (pixels.width * 4)) + (nx * 4) + c;
+                if (pixels.data[n] > 0) {
+                  A++;
+                  S += pixels.data[n];
+                }
+              }
+            }
+          }
+          tmp_cells[pix] = Math.floor(S/A) + g;
+          if (tmp_cells[pix] > hodge_range) tmp_cells[pix] = hodge_range;
+        }
+        else tmp_cells[pix] = 0;
       }
-      else tmp_pix[pix] = 0;
+      px += 4;
     }
-    if (mono) { tmp_pix[pix+1] = tmp_pix[pix]; tmp_pix[pix+2] = tmp_pix[pix]; }
   }
-  for (let i=0;i<tmp_pix.length;i++) pixels.data[i] = tmp_pix[i];
+  //update cells
+  for (let i=0; i<pixels.data.length;i++) {  //console.log(tmp_cells[i] + " - > " + pixels.data[i]);
+    pixels.data[i] = tmp_cells[i];
+  }
 }
 
 function grayscale(pixels) {
