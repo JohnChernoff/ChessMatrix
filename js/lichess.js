@@ -17,6 +17,13 @@ let current_tc = "rapid";
 let draw_button = document.getElementById("drawButt");
 let resign_button = document.getElementById("resignButt");
 let resurrect = true;
+ResultEnum = {
+  ONGOING: "Ongoing",
+  BLACK : "0-1",
+  WHITE : "1-0",
+  DRAW : "1/2-1/2",
+  ABORT: "Aborted"
+}
 
 function setOauth() {
   oauth = window.location.search.substr(1);
@@ -41,7 +48,7 @@ function getUserInfo() {
 
 function setBoards(type,num) {
   if (type === undefined) type = "blitz";
-  if (num === undefined) num = board_range_butt_obj.value; //range_games.valueAsNumber;
+  if (num === undefined) num = range_games.valueAsNumber;
   console.log("Fetching " + num + " TV Games...");
   let changed = true;
   if (board_list.length < num) {
@@ -94,7 +101,7 @@ function newBoard(data,playing,black_pov,timer) {
     playing : playing, black_pov : black_pov, fin : false,
     matrix : initMatrix(fen,black_pov), canvas_loc : { x : 0, y : 0 },
     turn: fen.split(" ")[1], last_move : "", clock : { white: 0, black: 0 },
-    winner : null, info : data
+    result : ResultEnum.ONGOING, info : data
   };
   board.timer = timer === undefined ? setInterval(nextGameTick,1000,board): timer;
   return board;
@@ -148,13 +155,13 @@ function send(sock, message) {
   if (sock.readyState === 1) sock.send(message); else msg_queue.push(message);
 }
 
-function setWinner(data,board) { //console.log("Winner: " + JSON.stringify(data));
+function setResult(data,board) { //console.log("Winner: " + JSON.stringify(data));
   let info = getBoardInfo(board);
   switch (data.d.win) {
-    case "w": board.winner = info.white.name; break;
-    case "b": board.winner = info.black.name; break;
-    case "null": board.winner = "draw/abort"; break;
-    default:  board.winner = "no winner";
+    case "b": board.result = ResultEnum.BLACK; break;
+    case "w": board.result = ResultEnum.WHITE; break;
+    case "null": board.result = ResultEnum.DRAW; break;
+    default:  board.result = ResultEnum.ABORT;
   }
   clearInterval(board.timer);
   board_queue.push(board);
@@ -191,14 +198,14 @@ function newObservation(e) {
     if (data.d.id) { //console.log(data);
       let board = playing ? play_board : getObservedGame(data.d.id);
       if (playing ? play_board.info.id === data.d.id : board !== null) {
-        if (data.t === "fen" && board.winner == null) {
+        if (data.t === "fen" && board.result === ResultEnum.ONGOING) {
           board.matrix = initMatrix(data.d.fen,board.black_pov);
           board.last_move = data.d.lm;
           board.clock = { white : data.d.wc, black : data.d.bc };
           board.turn = data.d.fen.split(" ")[1];
           board_queue.push(snapshot(board));
         }
-        else if (data.t === "finish") setWinner(data,board);
+        else if (data.t === "finish") setResult(data,board);
       }
     }
   }

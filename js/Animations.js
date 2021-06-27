@@ -1,4 +1,5 @@
 function animateBoard(board,board_dim) {
+  drawStatus(board,board_dim);
   //animateBigLife(board,board_dim);
   //animateBoardLife(board,board_dim);
   //animateBoardMosh(board,board_dim);
@@ -12,7 +13,7 @@ function animateBoardMosh(board,board_dim) {
   board.matrix[rx][ry].control = getControl(rx,ry,board);
   board.matrix[rx][ry].color = getColor(board.matrix[rx][ry]);
   linearInterpolateBoard(board.matrix,board_dim);
-  showWinner(board,board_dim,"white");
+  showResult(board,board_dim,"white");
 }
 
 function animateBoardLife(board,board_dim) {
@@ -48,7 +49,7 @@ function animateBoardLife(board,board_dim) {
 
   linearInterpolateBoard(board.matrix,board_dim);
   nextTick(board.square_cells,board.square_tmp_cells,128,isAliveChess);
-  showWinner(board,board_dim,"white");
+  showResult(board,board_dim,"white");
 }
 
 function animateBigLife(board,board_dim) {
@@ -68,7 +69,7 @@ function animateBigLife(board,board_dim) {
   nextTick(board.big_cells,board.big_tmp_cells,255,isAlive);
   updateBigLife(board.big_cells,board.big_tmp_cells,board.pixels);
   ctx.putImageData(board.pixels,board_dim.board_x,board_dim.board_y);
-  showWinner(board,board_dim,"white");
+  showResult(board,board_dim,"white");
 }
 
 function updateBigLife(cells,tmp_cells,pixels) {
@@ -124,13 +125,13 @@ function isAliveChess(cell,neighbours,max_age) {
   else return (Math.abs(cell.control) > 1 || neighbours === 3 || cell.age > max_age);
 }
 
-function showWinner(board, board_dim, color) {
+function showResult(board, board_dim, color) {
   ctx.fillStyle = color;
   ctx.font = 'bold ' + (board_dim.board_height/12) + 'px fixedsys';
-  ctx.fillText("Winner: ",
-    board.canvas_loc.x + centerText("winner",board_dim.board_width), board.canvas_loc.y + board_dim.board_height/3);
-  ctx.fillText(board.winner,
-    board.canvas_loc.x + centerText(board.winner,board_dim.board_width), board.canvas_loc.y + board_dim.board_height/1.5);
+  ctx.fillText("Result: ",
+    board.canvas_loc.x + centerText("Result:",board_dim.board_width), board.canvas_loc.y + board_dim.board_height/3);
+  ctx.fillText(board.result,
+    board.canvas_loc.x + centerText(board.result,board_dim.board_width), board.canvas_loc.y + board_dim.board_height/1.5);
 }
 
 function animateHodge(board,board_dim) {
@@ -143,7 +144,7 @@ function animateHodge(board,board_dim) {
     hodge_var1_butt_obj.value,hodge_var2_butt_obj.value,hodge_var3_butt_obj.value, false);
   ctx.putImageData(board.pixels,board_dim.board_x,board_dim.board_y);
   drawSquares(board.matrix,board_dim,false,true,false,false);
-  showWinner(board,board_dim,"blue");
+  //showResult(board,board_dim,"blue");
 }
 
 function nextHodgeTick(pixels,tmp_cells,k1,k2,g, mono) {

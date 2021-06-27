@@ -103,13 +103,13 @@ button {
     overflow: hidden;
     width: 80px;
     -webkit-appearance: none;
-    background-color: black;
+    background-color: darkslategray;
   }
 
   input[type='range']::-webkit-slider-runnable-track {
     height: 10px;
     -webkit-appearance: none;
-    color: grey;
+    color: darkslategray;
     margin-top: -1px;
   }
 

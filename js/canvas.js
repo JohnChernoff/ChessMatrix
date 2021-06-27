@@ -25,7 +25,7 @@ boardLoop(); //TODO: maybe place in onload of all images?
 
 canvas.addEventListener("mousedown", event => {
   if (playing) {
-    if (play_board.winner == null) {
+    if (play_board.result === ResultEnum.ONGOING) {
       let status_size = play_board_size / status_percent;
       let sz2 = status_size/2;
       let board_size = play_board_size - status_size;
@@ -47,7 +47,7 @@ canvas.addEventListener("mousedown", event => {
   else {
     let board = getObsBoardFromClick(event); if (board !== null)  {
       if (anim_test) {
-        board.winner = "Test"; board_queue.push(board);
+        board.result = ResultEnum.DRAW; board_queue.push(board);
       }
       else {
         clearBoard(board); setBoards();
@@ -134,15 +134,16 @@ function drawBoards() {
 }
 
 function getBoardDim(board) {
-  let board_size = playing ? play_board_size : obs_board_size;
+  let board_size = (playing ? play_board_size : obs_board_size);
   let status_size = board_size/status_percent; let sz2 = status_size/2;
   let board_y = board.canvas_loc.y + sz2;
   let board_width = board_size - status_size, board_height = board_size - status_size;
   let square_width = (board_width / 8), square_height = (board_height / 8);
   return {
-    board_size: board_size, status_size: status_size, sz2: sz2,
-    board_x: board.canvas_loc.x, board_y: board_y,
-    board_width: board_width, board_height: board_height, square_width: square_width, square_height: square_height
+    board_size: (board_size), status_size: (status_size), sz2: (sz2),
+    board_x: (board.canvas_loc.x), board_y: (board_y),
+    board_width: (board_width), board_height: (board_height),
+    square_width: (square_width), square_height: (square_height)
   }
 }
 
@@ -157,7 +158,7 @@ function drawBoard(board) {
 
   calculateControl(board);
 
-  if (board.winner !== null) {  //console.log("Animating: " + getBoardNumber(board));
+  if (board.result !== ResultEnum.ONGOING) {  //console.log("Animating: " + getBoardNumber(board));
     animateBoard(board,board_dim);
     if (!board.fin) board_queue.push(board);
     return;
@@ -200,22 +201,41 @@ function drawMoveArrow(board,board_dim) {
   }
 }
 
+function getWinPrefix(board) {
+  let black_prefix, white_prefix;
+  switch(board.result) {
+    case ResultEnum.BLACK:
+      black_prefix = "1.0 -> "; white_prefix = "0.0 -> "; break;
+    case ResultEnum.WHITE:
+      black_prefix = "0.0 -> "; white_prefix = "1.0 -> "; break;
+    case ResultEnum.DRAW:
+      black_prefix = "0.5 -> "; white_prefix = "0.5 -> "; break;
+    case ResultEnum.ABORT:
+      black_prefix = "* -> "; white_prefix = "* -> "; break;
+    default:
+      black_prefix = ""; white_prefix = "";
+  }
+  return { black: black_prefix, white: white_prefix };
+}
+
 function drawStatus(board,board_dim) {
-  ctx.fillStyle = "orange";
+  ctx.fillStyle = board.turn === (board.black_pov ? "w" : "b") ? "green" : "brown";
   ctx.fillRect(board_dim.board_x,board_dim.board_y - board_dim.sz2,board_dim.board_width,board_dim.sz2);
+  ctx.fillStyle = board.turn === (board.black_pov ? "b" : "w") ? "green" : "brown";
   ctx.fillRect(board_dim.board_x,board_dim.board_y + board_dim.board_height,board_dim.board_width,board_dim.sz2);
   let info = getBoardInfo(board);
   ctx.fillStyle = "black";
   ctx.font = 'bold ' + (board_dim.sz2/1.5) + 'px fixedsys'; let fontpad = board_dim.sz2/4;
   let top_y = board_dim.board_y - fontpad, bottom_y = (board_dim.board_y + board_dim.sz2 + board_dim.board_height) - fontpad;
   //if (playing) console.log(JSON.stringify(board.info));
-  let black_txt = info.black.name + "(" + info.black.rating + ") : " + sec2hms(board.clock.black,info.initial_time);
-  let white_txt = info.white.name + "(" + info.white.rating + ") : " + sec2hms(board.clock.white,info.initial_time);
+  let pfx = getWinPrefix(board);
+  let black_txt = pfx.black + info.black.name + "(" + info.black.rating + ") : " + sec2hms(board.clock.black,info.initial_time);
+  let white_txt = pfx.white + info.white.name + "(" + info.white.rating + ") : " + sec2hms(board.clock.white,info.initial_time);
   ctx.fillText(black_txt, board_dim.board_x + centerText(black_txt,board_dim.board_width),board.black_pov ? bottom_y : top_y);
   ctx.fillText(white_txt, board_dim.board_x + centerText(white_txt,board_dim.board_width),board.black_pov ? top_y : bottom_y);
 }
 
-function drawSquares(matrix,board_dim,blocks,pieces,control,grid) {
+function drawSquares(matrix,board_dim,blocks,pieces,control,grid) { //console.log(board_dim);
   let piece_width = board_dim.square_width/2, piece_height = board_dim.square_height/2;
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
@@ -245,8 +265,25 @@ function drawSquares(matrix,board_dim,blocks,pieces,control,grid) {
 
       if (grid) {
         ctx.strokeStyle = "rgb(128,128,128)";
-        ctx.strokeRect(squareX,squareY,board_dim.square_width,board_dim.square_height);
+        ctx.strokeRect(squareX+2,squareY+2,board_dim.square_width-4,board_dim.square_height-4);
       }
+    }
+  }
+  if (false) {
+    ctx.strokeStyle = "rgb(128,128,128)";
+    for (let y = 0; y <= 8; y++) {
+      let y1 = board_dim.board_y + (y * board_dim.square_height);
+      ctx.beginPath();
+      ctx.moveTo(board_dim.board_x,y1);
+      ctx.lineTo(board_dim.board_x + board_dim.board_width,y1);
+      ctx.stroke();
+    }
+    for (let x = 0; x <= 8; x++) {
+      let x1 = board_dim.board_x + (x * board_dim.square_width);
+      ctx.beginPath();
+      ctx.moveTo(x1,board_dim.board_y);
+      ctx.lineTo(x1,board_dim.board_y + board_dim.board_height);
+      ctx.stroke();
     }
   }
 }

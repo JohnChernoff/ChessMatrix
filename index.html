@@ -28,11 +28,6 @@
   <div id="sidebar">
     <button id="logButt"  onclick="location.href='http://chernovia.com:8087/auth';" > Lichess Login </button>
     <button id="playButt" class="lobby_cmds" onclick="showSeekOptions()">Play</button>
-    <!-- <label for="range_games">Games</label>
-    <input type="range" min="1" max="15" value="8" step="1" class="slider" id="range_games" onchange="setBoards()">
-    -->
-    <label for="boardRangeButt">Boards: </label>
-    <button id = "boardRangeButt" class = "range_butt">X</button>
     <label for="selectScheme">Color Scheme</label>
     <select id="selectScheme" onchange="drawBoards()">
       <option value="COLOR_SCHEME_BLUE_RED">Blue/Red</option>
@@ -43,6 +38,8 @@
       <option value="COLOR_SCHEME_BLUE_GREEN2">Blue/Green Multi-hue</option>
       <option value="COLOR_SCHEME_MONO">Monochrome</option>
     </select>
+    <label for="range_games">Games</label>
+    <input type="range" min="1" max="30" value="8" step="1" class="slider" id="range_games" onchange="setBoards()">
     <label for="chkShade">Shading</label>
     <input type="checkbox" id="chkShade" onchange="drawBoards()" checked="true">
     <label for="chkPieces">Show Pieces</label>

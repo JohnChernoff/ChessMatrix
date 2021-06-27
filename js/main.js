@@ -3,7 +3,7 @@
     drag-move
     visually indicate logged in status/username, disable playing when not logged in
     visually indicate turn
-    flip board, resign, offer draw, chat
+    flip board, accept draw, chat
     move histories
     musical events (board = instrument, square = pitch)
     fancier animations
@@ -15,9 +15,6 @@ hodge_var1_butt_obj,hodge_var2_butt_obj,hodge_var3_butt_obj;
 
 //console.log(getCookie("oauth"));
 function main() {
-
-  board_range_butt_obj = new RangeButton(document.getElementById("boardRangeButt"),1,24,8,1,250,setBoards);
-  registerButton(board_range_butt_obj);
 
   time_range_butt_obj = new RangeButton(document.getElementById("timeRangeButt"),0,60,5,1,250,updateRatings);
   registerButton(time_range_butt_obj);
