@@ -12,7 +12,7 @@ function animateBoardMosh(board,board_dim) {
   board.matrix[rx][ry].control = getControl(rx,ry,board);
   board.matrix[rx][ry].color = getColor(board.matrix[rx][ry]);
   linearInterpolateBoard(board.matrix,board_dim);
-  showWinner(board,board_dim);
+  showWinner(board,board_dim,"white");
 }
 
 function animateBoardLife(board,board_dim) {
@@ -46,10 +46,9 @@ function animateBoardLife(board,board_dim) {
     board.square_cells[rank][file].control = board.matrix[rank][file].control;
   }
 
-  linearInterpolateBoard(board.matrix,board_dim); //drawSquares(board.matrix,board_dim.,false,true,false);
-  //drawSquares(board.matrix,getBoardDim(board),false,true,true);
+  linearInterpolateBoard(board.matrix,board_dim);
   nextTick(board.square_cells,board.square_tmp_cells,128,isAliveChess);
-  showWinner(board,board_dim);
+  showWinner(board,board_dim,"white");
 }
 
 function animateBigLife(board,board_dim) {
@@ -69,7 +68,7 @@ function animateBigLife(board,board_dim) {
   nextTick(board.big_cells,board.big_tmp_cells,255,isAlive);
   updateBigLife(board.big_cells,board.big_tmp_cells,board.pixels);
   ctx.putImageData(board.pixels,board_dim.board_x,board_dim.board_y);
-  showWinner(board,board_dim);
+  showWinner(board,board_dim,"white");
 }
 
 function updateBigLife(cells,tmp_cells,pixels) {
@@ -125,8 +124,8 @@ function isAliveChess(cell,neighbours,max_age) {
   else return (Math.abs(cell.control) > 1 || neighbours === 3 || cell.age > max_age);
 }
 
-function showWinner(board, board_dim) {
-  ctx.fillStyle = "blue" //rndColor();
+function showWinner(board, board_dim, color) {
+  ctx.fillStyle = color;
   ctx.font = 'bold ' + (board_dim.board_height/12) + 'px fixedsys';
   ctx.fillText("Winner: ",
     board.canvas_loc.x + centerText("winner",board_dim.board_width), board.canvas_loc.y + board_dim.board_height/3);
@@ -135,74 +134,79 @@ function showWinner(board, board_dim) {
 }
 
 function animateHodge(board,board_dim) {
-  if (board.hodge === undefined) { board.hodge_mat = []; board.tmp_hodge_mat = []; }
-  board.pixels = ctx.getImageData(board_dim.board_x,board_dim.board_y,board_dim.board_width,board_dim.board_height);
-  for (let x=0;x<board.pixels.width;x++) {
-    if (board.hodge === undefined) { board.hodge_mat[x] = []; board.tmp_hodge_mat[x] = []; }
-    for (let y=0;y<board.pixels.height;y++) {
-      if (board.hodge === undefined) { board.hodge_mat[x][y] = []; board.tmp_hodge_mat[x][y] = []; }
-      for (let c=0;c<3;c++) {
-        board.hodge_mat[x][y][c] = board.pixels.data[((y * board.pixels.width + x) * 4) + c];
-        if (board.hodge === undefined) { board.tmp_hodge_mat[x][y][c] = board.hodge_mat[x][y][c]; }
-      }
-    }
+  if (board.hodge === undefined) {
+    board.pixels = ctx.getImageData(board_dim.board_x,board_dim.board_y,board_dim.board_width,board_dim.board_height);
+    board.hodge = true;
+    board.tmp_pix = [];
   }
-  board.hodge = true;
-  nextHodgeTick(board.pixels,board.hodge_mat,board.tmp_hodge_mat,7,7,2);
+  nextHodgeTick(board.pixels,board.tmp_pix,7,7,7, false);
   ctx.putImageData(board.pixels,board_dim.board_x,board_dim.board_y);
-  drawSquares(board.matrix,board_dim,false,true,false);
+  drawSquares(board.matrix,board_dim,false,true,false,false);
+  showWinner(board,board_dim,"blue");
 }
 
-function nextHodgeTick(pixels,cells,tmp_cells,k1,k2,g) {
-  let hodge_range = 255, minX = 0, minY = 0, maxX = cells.length-1, maxY = cells[0].length-1;
-  for (let x = minX; x <= maxX; x++) {
-    for (let y = minY; y <= maxY; y++) {
-      for (let c = 0; c < 3; c++) {
-        if (cells[x][y][c] === 0) {
-          let A = 0, B = 0;
-          for (let i = x - 1; i <= x + 1; i++)
-            for (let j = y - 1; j <= y + 1; j++) {
-              let i2 = i, j2 = j;
-              if (i2 < 0) i2 = maxX; else if (i2 >= maxX) i2 = minX;
-              if (j2 < 0) j2 = maxY; else if (j2 >= maxY) j2 = minY;
-              if (i2 !== x || j2 !== y) {
-                if (cells[i2][j2][c] > 0) A++; else if (cells[i2][j2][c] === 0) B++;
-              }
+function nextHodgeTick(pixels,tmp_pix,k1,k2,g, mono) { //let tmp_pix = pixels.data.slice();
+  let hodge_range = 255;
+  let colors = (mono ? 1 : 3);
+  let pix = 0,A,B,S,n;
+  let pix_row = pixels.width * 4;
+  for (let px = 0; px <= pixels.data.length; px += 4) {
+    tmp_pix[px + 3] = 255;
+    for (let c = 0; c < colors; c++) {
+      pix = px + c;
+      if (pixels.data[pix] === 0) {
+        A = 0; B = 0;
+        for (let y = -pix_row; y <= pix_row + 1; y += pix_row) {
+          n = pix + y;
+          if (n < 0) n = pixels.data.length + n;
+          else if (n > pixels.data.length) n = n - pixels.data.length;
+          for (let x = -4; x <= 4; x += 4) {
+            if (x !== 0 || y !== 0) {
+              let row = Math.floor(n / pix_row);
+              n += x;
+              let row_shift = (Math.floor(n / pix_row)) - row;
+              if (row_shift !== 0) n += (pix_row * row_shift);
+              if (pixels.data[n] > 0) A++; else if (pixels.data[n] === 0) B++;
             }
-          tmp_cells[x][y][c] = Math.floor(A/k1) + Math.floor(B/k2); //parseInt(A / k1) + parseInt(B / k2);
-          if (tmp_cells[x][y][c] > hodge_range) tmp_cells[x][y][c] = hodge_range;
+          }
         }
-        else if (cells[x][y][c] < hodge_range) {
-          let A = 1, S = cells[x][y][c];
-          for (let i = x - 1; i <= x + 1; i++) {
-            for (let j = y - 1; j <= y + 1; j++) {
-              let i2 = i, j2 = j;
-              if (i2 < 0) i2 = maxX; else if (i2 >= maxX) i2 = minX;
-              if (j2 < 0) j2 = maxY; else if (j2 >= maxY) j2 = minY;
-              if (i2 !== x || j2 !== y) {
-                if (cells[i2][j2][c] > 0) {
-                  A++;
-                  S += cells[i2][j2][c];
-                }
+        tmp_pix[pix] = Math.floor(A/k1) + Math.floor(B/k2);
+        if (tmp_pix[pix] > hodge_range) tmp_pix[pix] = hodge_range;
+      }
+      else if (pixels.data[pix] < hodge_range) {
+        A = 1; S = pixels.data[pix];
+        for (let y = -pix_row; y <= pix_row + 1; y += pix_row) {
+          n = pix + y;
+          if (n < 0) n = pixels.data.length + n;
+          else if (n > pixels.data.length) n = n - pixels.data.length;
+          for (let x = -4; x <= 4; x += 4) {
+            if (x !== 0 || y !== 0) {
+              let row = Math.floor(n / pix_row);
+              n += x;
+              let row_shift = (Math.floor(n / pix_row)) - row;
+              if (row_shift !== 0) n += (pix_row * row_shift);
+              if (pixels.data[n] > 0) {
+                A++; S += pixels.data[n];
               }
             }
           }
-          tmp_cells[x][y][c] = Math.floor(S/A) + g; //parseInt(S / A) + g;
-          if (tmp_cells[x][y][c] > hodge_range) tmp_cells[x][y][c] = hodge_range;
         }
-        else tmp_cells[x][y][c] = 0;
+        tmp_pix[pix] = Math.floor(S/A) + g;
+        if (tmp_pix[pix] > hodge_range) tmp_pix[pix] = hodge_range;
       }
+      else tmp_pix[pix] = 0;
     }
+    if (mono) { tmp_pix[pix+1] = tmp_pix[pix]; tmp_pix[pix+2] = tmp_pix[pix]; }
   }
-  //update cells
-  for (let x=0; x <= maxX; x++) {
-    for (let y = 0; y <= maxY; y++) {
-      let pixel = ((y * (pixels.width * 4)) + (x * 4));
-      pixels.data[pixel + 3] = 255; //transparent pixel
-      for (let c = 0; c < 3; c++) {
-        //cells[x][y][c] = Math.floor(tmp_cells[x][y][c]); pixels.data[pixel + c] = cells[x][y][c];
-        pixels.data[pixel + c] = tmp_cells[x][y][c];
-      }
+  for (let i=0;i<tmp_pix.length;i++) pixels.data[i] = tmp_pix[i];
+}
+
+function grayscale(pixels) {
+  for (let y = 0; y < pixels.height; y++) {
+    for (let x = 0; x < pixels.width; x++) {
+      let i = (y * 4) * pixels.width + x * 4;
+      let avg = (pixels.data[i] + pixels.data[i + 1] + pixels.data[i + 2]) / 3;
+      pixels.data[i] = avg; pixels.data[i + 1] = avg; pixels.data[i + 2] = avg;
     }
   }
 }

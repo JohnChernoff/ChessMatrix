@@ -14,7 +14,7 @@ let background_color = "black";
 let from_click = null, to_click = null;
 let status_percent = 10;
 let board_queue = [];
-let anim_test = false;
+let anim_test = true;
 
 for (let i=0; i<6; i++) {
   piece_imgs[i] = { black: new Image(), white: new Image() }; //onload?
@@ -164,7 +164,7 @@ function drawBoard(board) {
   }
 
   if (chk_shade.checked) linearInterpolateBoard(board.matrix,board_dim);
-  drawSquares(board.matrix,board_dim,!chk_shade.checked,chk_pieces.checked,chk_control.checked);
+  drawSquares(board.matrix,board_dim,!chk_shade.checked,chk_pieces.checked,chk_control.checked,true);
   drawMoveArrow(board,board_dim);
   drawStatus(board,board_dim);
   //ctx.strokeStyle = "rgb(24,24,24)"; ctx.strokeRect(board_x,board_y,board_width,board_height);
@@ -215,7 +215,7 @@ function drawStatus(board,board_dim) {
   ctx.fillText(white_txt, board_dim.board_x + centerText(white_txt,board_dim.board_width),board.black_pov ? top_y : bottom_y);
 }
 
-function drawSquares(matrix,board_dim,blocks,pieces,control) {
+function drawSquares(matrix,board_dim,blocks,pieces,control,grid) {
   let piece_width = board_dim.square_width/2, piece_height = board_dim.square_height/2;
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
@@ -243,8 +243,10 @@ function drawSquares(matrix,board_dim,blocks,pieces,control) {
           squareX + board_dim.square_width/2 ,squareY + board_dim.square_height/1.5);
       }
 
-      ctx.strokeStyle = "rgb(128,128,128)";
-      ctx.strokeRect(squareX,squareY,board_dim.square_width,board_dim.square_height);
+      if (grid) {
+        ctx.strokeStyle = "rgb(128,128,128)";
+        ctx.strokeRect(squareX,squareY,board_dim.square_width,board_dim.square_height);
+      }
     }
   }
 }
