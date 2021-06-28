@@ -1,13 +1,13 @@
 const AudioContextFunc = window.AudioContext || window.webkitAudioContext;
 let audioContext = new AudioContextFunc();
 const player = new WebAudioFontPlayer();
-const MOVE = "Move", CAPTURE = "Capture", CASTLING = "Castling", CHECK = "Check", CHECKMATE = "Checkmate";
-const INSTRUMENTS = [MOVE,CAPTURE,CASTLING,CHECK,CHECKMATE];
-const MIDI_DEFAULTS = [73,45,116,1,1];
+const INST_MELODY = "Move Melody", INST_HARMONY = "Move Harmony", INST_CAPTURE = "Capture", INST_CASTLING = "Castling", INST_CHECK = "Check";
+const INSTRUMENTS = [INST_MELODY,INST_HARMONY,INST_CAPTURE,INST_CASTLING,INST_CHECK];
+const MIDI_DEFAULTS = [1,73,45,116,1];
 const orchestra = [];
 let muted = true;
 let max_volume = .1;
-let tempo = .5;
+let tempo = .4;
 let note_queue = [];
 
 function setTempo(t) {
@@ -44,13 +44,26 @@ function createMIDISelection(instrument,timbre,element_id) {
   }
   sel.selectedIndex = timbre;
   sel.addEventListener("click", ()=> loadInstrument(type));
-  let label = document.createElement("label");
-  label.htmlFor = sel.id;
-  label.textContent = "Timbre: " + INSTRUMENTS[instrument];
+  let label_inst = document.createElement("label");
+  label_inst.htmlFor = sel.id;
+  label_inst.textContent = "Timbre: " + type; //INSTRUMENTS[instrument];
   let div = document.getElementById(element_id);
-  div.appendChild(label);
+  div.appendChild(label_inst);
   div.appendChild(document.createElement("br"));
   div.appendChild(sel);
+  div.appendChild(document.createElement("br"));
+  let range_vol = document.createElement("input");
+  range_vol.id = "range_" + type;
+  range_vol.type = 'range';
+  range_vol.min = '0';
+  range_vol.max = '100';
+  range_vol.value = '50';
+  range_vol.step = '1';
+  let label_vol = document.createElement("label");
+  label_vol.htmlFor = "";
+  label_vol.textContent = "Volume: ";
+  div.appendChild(label_vol);
+  div.appendChild(range_vol);
   div.appendChild(document.createElement("br"));
   div.appendChild(document.createElement("br"));
 }
@@ -62,8 +75,10 @@ function loadInstrument(type) {
   player.loader.waitLoad(function () { orchestra[type] = window[info.variable]; });
 }
 
-function playNote(i,t,p,d,v) { //console.log(i + "," + t + "," + p + "," + d + "," + v +"," + mute);
-  if (!muted) return player.queueWaveTable(audioContext, audioContext.destination, i,t,p,d,v);
+function playNote(i,t,p,d,v) {
+  if (!muted) {
+    return player.queueWaveTable(audioContext, audioContext.destination, i,t,p,tempo * d,v);
+  }
   else return null;
 }
 
@@ -76,10 +91,8 @@ function addNoteToQueue(i,p,d,v) {
 function melodizer() {
   if (note_queue.length > 0) {
     let note = note_queue.pop();
-    let duration = tempo * note.duration;
-    //console.log("Duration")
-    playNote(note.instrument,0,note.pitch,duration/1000,note.volume);
-    setTimeout(() => melodizer(),duration);
+    playNote(note.instrument,0,note.pitch,note.duration/1000,note.volume);
+    setTimeout(() => melodizer(),tempo * note.duration);
   }
   else setTimeout(() => melodizer(),50);
 }
