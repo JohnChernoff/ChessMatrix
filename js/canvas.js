@@ -182,19 +182,16 @@ function playMove(move) {
   if (move !== null) {
     let fromPitch = 24 + (move.from.y * 8) + move.from.x;
     let toPitch = 24 + (move.to.y * 8) + move.to.x;
-    let mv2 = max_volume/2;
-    if (move.castling) {
-      playNote(orchestra[CASTLING],0,fromPitch,1,mv2);
-      playNote(orchestra[CASTLING],0,60,1,mv2);
-    }
-    else if (move.capture) {
-      let volume = mv2; // / (7 - Math.abs(move.piece));
-      playNote(orchestra[CAPTURE],0,fromPitch,1,volume);
-      playNote(orchestra[CAPTURE],0,toPitch,1,volume);
+    let volume = (document.getElementById("range_" + move.type).valueAsNumber/100) * .5;
+    if (move.type == INST_CAPTURE || move.type === INST_CASTLING) {
+      playNote(orchestra[move.type],0,fromPitch,1,volume);
+      playNote(orchestra[move.type],0,toPitch,1,volume);
     }
     else {
       let d = 8 / (7 - Math.abs(move.piece));
-      addNoteToQueue(orchestra[MOVE],toPitch,d,mv2)
+      addNoteToQueue(orchestra[INST_MELODY],fromPitch,d,volume);
+      volume = (document.getElementById("range_" + INST_HARMONY).valueAsNumber/100) * .5;
+      playNote(orchestra[INST_HARMONY],0,toPitch,8,volume);
     }
   }
 }
@@ -306,13 +303,14 @@ function getMoveInfo(board) { //console.log(board.last_move);
     let piece = board.black_pov ? board.matrix[7-to.y][7-to.x].piece : board.matrix[to.y][to.x].piece;
     let captured_piece = board.black_pov ? lastPosition[7-to.y][7-to.x].piece : lastPosition[to.y][to.x].piece;
     //console.log("Captured: " + captured_piece);
+    let type = INST_MELODY;
+    if (captured_piece !== 0) type = INST_CAPTURE;
+    else if (piece === 0) type = INST_CASTLING;
+    //TODO: add checks
     return {
       from: from,
       to: to,
-      capture: captured_piece !== 0,
-      castling: (piece === 0),
-      check: false, //TODO: add check/checkmate code
-      checkmate: false,
+      type: type,
       piece: piece
     }
   }
