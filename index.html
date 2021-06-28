@@ -26,8 +26,9 @@
 
   <!-- Add your site or application content here -->
   <div id="sidebar">
+    <label id="lab_login">Not Logged In</label>
     <button id="logButt"  onclick="location.href='http://chernovia.com:8087/auth';" > Lichess Login </button>
-    <button id="playButt" class="lobby_cmds" onclick="showSeekOptions()">Play</button>
+    <button hidden id="playButt" class="lobby_cmds" onclick="showSeekOptions()">Play</button>
     <label for="selectScheme">Color Scheme</label>
     <select id="selectScheme" onchange="drawBoards()">
       <option value="COLOR_SCHEME_BLUE_RED">Blue/Red</option>
@@ -48,9 +49,9 @@
     <input type="checkbox" id="chkControl" onchange="drawBoards()">
     <button id="drawButt" class="play_cmds" onclick="offerDraw()"> Draw </button>
     <button id="resignButt" class="play_cmds" onclick="resign()"> Resign </button>
-    <button id = "hodgeVar1Butt" class = "range_butt">2</button>
-    <button id = "hodgeVar2Butt" class = "range_butt">3</button>
-    <button id = "hodgeVar3Butt" class = "range_butt">16</button>
+    <button hidden id = "hodgeVar1Butt" class = "range_butt">2</button>
+    <button hidden id = "hodgeVar2Butt" class = "range_butt">3</button>
+    <button hidden id = "hodgeVar3Butt" class = "range_butt">16</button>
     <br><br>
   </div>
 

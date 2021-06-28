@@ -14,7 +14,7 @@ let background_color = "black";
 let from_click = null, to_click = null;
 let status_percent = 10;
 let board_queue = [];
-let anim_test = false;
+let anim_test = true;
 
 for (let i=0; i<6; i++) {
   piece_imgs[i] = { black: new Image(), white: new Image() }; //onload?
@@ -156,13 +156,13 @@ function drawBoard(board) {
   else if (unfitted) fitBoardsToScreen();
   let board_dim = getBoardDim(board);
 
-  calculateControl(board);
-
   if (board.result !== ResultEnum.ONGOING) {  //console.log("Animating: " + getBoardNumber(board));
     animateBoard(board,board_dim);
     if (!board.fin) board_queue.push(board);
     return;
   }
+
+  calculateColorControl(board);
 
   if (chk_shade.checked) linearInterpolateBoard(board.matrix,board_dim);
   drawSquares(board.matrix,board_dim,!chk_shade.checked,chk_pieces.checked,chk_control.checked,true);
@@ -171,7 +171,7 @@ function drawBoard(board) {
   //ctx.strokeStyle = "rgb(24,24,24)"; ctx.strokeRect(board_x,board_y,board_width,board_height);
 }
 
-function calculateControl(board) {
+function calculateColorControl(board) {
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       board.matrix[rank][file].control = getControl(rank,file,board);
@@ -422,6 +422,12 @@ function rgb(r, g, b){
 
 function rgb2array(rgb) {
   return rgb.match(/\d+/g);
+}
+
+function rgb2IntArray(color) {
+  let a = []; let rgb = rgb2array(color);
+  a[0] = parseInt(rgb[0]); a[1] = parseInt(rgb[1]); a[2] = parseInt(rgb[2]);
+  return a;
 }
 
 //thanks to www.jwir3.com for this snippet

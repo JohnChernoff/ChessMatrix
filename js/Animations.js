@@ -4,6 +4,7 @@ function animateBoard(board,board_dim) {
   //animateBoardLife(board,board_dim);
   //animateBoardMosh(board,board_dim);
   animateHodge(board,board_dim);
+  //animateBigHodge(board,board_dim);
 }
 
 function animateBoardMosh(board,board_dim) {
@@ -42,7 +43,7 @@ function animateBoardLife(board,board_dim) {
     }
   }
 
-  calculateControl(board);
+  calculateColorControl(board);
   for (let rank=0;rank<8;rank++) for (let file=0;file<8;file++) {
     board.square_cells[rank][file].control = board.matrix[rank][file].control;
   }
@@ -134,20 +135,20 @@ function showResult(board, board_dim, color) {
     board.canvas_loc.x + centerText(board.result,board_dim.board_width), board.canvas_loc.y + board_dim.board_height/1.5);
 }
 
-function animateHodge(board,board_dim) {
-  if (board.hodge === undefined) {
+function animateBigHodge(board,board_dim) {
+  if (board.big_hodge === undefined) {
     board.pixels = ctx.getImageData(board_dim.board_x,board_dim.board_y,board_dim.board_width,board_dim.board_height);
-    board.hodge = true;
+    board.big_hodge = true;
     board.tmp_pix = [];
   }
-  nextHodgeTick(board.pixels,board.tmp_pix,
+  nextBigHodgeTick(board.pixels,board.tmp_pix,
     hodge_var1_butt_obj.value,hodge_var2_butt_obj.value,hodge_var3_butt_obj.value, false);
   ctx.putImageData(board.pixels,board_dim.board_x,board_dim.board_y);
   drawSquares(board.matrix,board_dim,false,true,false,false);
   //showResult(board,board_dim,"blue");
 }
 
-function nextHodgeTick(pixels,tmp_cells,k1,k2,g, mono) {
+function nextBigHodgeTick(pixels,tmp_cells,k1,k2,g, mono) {
   let hodge_range = 255, minX = 0, minY = 0, maxX = pixels.width-1, maxY = pixels.width-1;
   let px = 0, pix = 0, n = 0, nx = 0, ny = 0, A = 0, B = 0, S = 0;
   for (let y = minY; y <= maxY; y++) {
@@ -172,7 +173,7 @@ function nextHodgeTick(pixels,tmp_cells,k1,k2,g, mono) {
           if (tmp_cells[pix] > hodge_range) tmp_cells[pix] = hodge_range;
         }
         else if (pixels.data[pix] < hodge_range) {
-          A = 1; S = pixels.data[pix];
+          A = 0; S = pixels.data[pix];
           for (let i = x - 1; i <= x + 1; i++) {
             for (let j = y - 1; j <= y + 1; j++) {
               nx = i; ny = j;
@@ -198,6 +199,84 @@ function nextHodgeTick(pixels,tmp_cells,k1,k2,g, mono) {
   //update cells
   for (let i=0; i<pixels.data.length;i++) {  //console.log(tmp_cells[i] + " - > " + pixels.data[i]);
     pixels.data[i] = tmp_cells[i];
+  }
+}
+
+function animateHodge(board,board_dim) {
+  if (board.hodge === undefined) {
+    calculateColorControl(board);
+    //for (let x = 0; x <= 7; x++) for (let y = 0; y <= 7; y++) board.matrix[x][y].color = rndColor();
+    board.hodge = true;
+  }
+  nextHodgeTick(board.matrix,8,8,1); //hodge_var1_butt_obj.value,hodge_var2_butt_obj.value,hodge_var3_butt_obj.value);
+  linearInterpolateBoard(board.matrix,board_dim);
+  drawSquares(board.matrix,board_dim,false,true,false,false);
+}
+
+function nextHodgeTick(matrix,k1,k2,g) {
+  let hodge_range = 255, minX = 0, minY = 0, maxX = 7, maxY = 7;
+  let color_mat = [], new_mat = [];
+  for (let x = minX; x <= maxX; x++) {
+    color_mat[x] = []; new_mat[x] = [];
+    for (let y = minY; y <= maxY; y++) {
+      color_mat[x][y] = rgb2IntArray(matrix[x][y].color);
+      new_mat[x][y] = [];
+    }
+  }
+  //console.log("color matrix: " + JSON.stringify(color_mat));
+  let nx = 0, ny = 0, A = 0, B = 0, S = 0;
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      for (let c = 0; c < 3; c++) {
+        if (color_mat[x][y][c] === 0) {
+          A = 0; B = 0;
+          for (let i = x - 1; i <= x + 1; i++) {
+            for (let j = y - 1; j <= y + 1; j++) {
+              nx = i; ny = j;
+              if (nx < 0) nx = maxX; else if (nx >= maxX) nx = minX;
+              if (ny < 0) ny = maxY; else if (ny >= maxY) ny = minY;
+              if (nx !== x || ny !== y) {
+                if (color_mat[nx][ny][c] > 0) A++; else if (color_mat[nx][ny][c] === 0) B++;
+              }
+            }
+          }
+          new_mat[x][y][c] = Math.floor(A/k1) + Math.floor(B/k2);
+          if (new_mat[x][y][c] > hodge_range) new_mat[x][y][c] = hodge_range;
+        }
+        else if (color_mat[x][y][c] < hodge_range) {
+          A = 0; S = color_mat[x][y][c];
+          //console.log(S);
+          for (let i = x - 1; i <= x + 1; i++) {
+            for (let j = y - 1; j <= y + 1; j++) {
+              nx = i; ny = j;
+              if (nx < 0) nx = maxX; else if (nx >= maxX) nx = minX;
+              if (ny < 0) ny = maxY; else if (ny >= maxY) ny = minY;
+              if (nx !== x || ny !== y) {
+                if (color_mat[nx][ny][c] > 0) {
+                  A++;
+                  S += color_mat[nx][ny][c];
+                }
+              }
+            }
+          }
+          //console.log("New: " + S + "," + A + ", " + g);
+          new_mat[x][y][c] = Math.floor(S/A) + g;
+          //console.log("New: " + x + "," + y + " = " + new_mat[x][y][c]);
+          if (new_mat[x][y][c] > hodge_range) new_mat[x][y][c] = hodge_range;
+        }
+        else new_mat[x][y][c] = 0;
+      }
+    }
+  }
+  //console.log("New Mat: " + JSON.stringify(new_mat));
+  //update cells
+  for (let x = minX; x <= maxX; x++) {
+    for (let y = minY; y <= maxY; y++) {
+      if (matrix[x][y].piece == 0) {
+        matrix[x][y].color = rgb(new_mat[x][y][0],new_mat[x][y][1],new_mat[x][y][2]);
+        //console.log("New Color at " + x + "," + y + ": " + matrix[x][y].color);
+      }
+    }
   }
 }
 

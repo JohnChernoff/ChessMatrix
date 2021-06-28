@@ -14,6 +14,8 @@ let logged_in = false;
 let watching = false;
 let playing = false;
 let current_tc = "rapid";
+let log_button = document.getElementById("lab_login");
+let play_button = document.getElementById("playButt");
 let draw_button = document.getElementById("drawButt");
 let resign_button = document.getElementById("resignButt");
 let resurrect = true;
@@ -34,7 +36,11 @@ function setOauth() {
     window.history.replaceState({}, document.title,window.location.href.split('?')[0]);
   }
   else  oauth = getCookie("oauth");
-  if (oauth.length > 0) getUserInfo().then(json => { user_name = json.username; getEvents(); });
+  if (oauth.length > 0) getUserInfo().then(json => {
+    user_name = json.username; getEvents();
+    log_button.innerText = "Logged in as: " + json.username;
+    play_button.hidden = false;
+  });
   else console.log("Bad oauth, augh");
 }
 

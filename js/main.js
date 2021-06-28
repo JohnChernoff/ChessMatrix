@@ -1,11 +1,9 @@
 /* TODO:
     weird bugs/animation catchups from tabbing away or lichess socket closing
     drag-move
-    visually indicate logged in status/username, disable playing when not logged in
     flip board, accept draw, chat
     move histories
     musical events (board = instrument, square = pitch)
-    fancier animations
     help of some sort
 */
 
@@ -37,7 +35,6 @@ function main() {
   registerButton(hodge_var3_butt_obj);
 
   setOauth();
-  if (oauth.length > 0) document.getElementById("logButt").innerText ="Lichess relog";
   resize();
   runLichessSocket();
 }
