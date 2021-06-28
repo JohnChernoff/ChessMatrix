@@ -272,7 +272,7 @@ function nextHodgeTick(matrix,k1,k2,g) {
   //update cells
   for (let x = minX; x <= maxX; x++) {
     for (let y = minY; y <= maxY; y++) {
-      if (matrix[x][y].piece == 0) {
+      if (matrix[x][y].piece === 0) {
         matrix[x][y].color = rgb(new_mat[x][y][0],new_mat[x][y][1],new_mat[x][y][2]);
         //console.log("New Color at " + x + "," + y + ": " + matrix[x][y].color);
       }

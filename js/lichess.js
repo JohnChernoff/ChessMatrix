@@ -164,7 +164,7 @@ function send(sock, message) {
 }
 
 function setResult(data,board) { //console.log("Winner: " + JSON.stringify(data));
-  let info = getBoardInfo(board);
+  //let info = getBoardInfo(board);
   switch (data.d.win) {
     case "b": board.result = ResultEnum.BLACK; break;
     case "w": board.result = ResultEnum.WHITE; break;
@@ -335,12 +335,14 @@ function seek() {
     let rated = document.getElementById("chkRated").checked;
     let min_rating = min_rating_range_butt_obj.value;
     let max_rating = max_rating_range_butt_obj.value;
-    getRating(variant, time_control).then(rating => seekGame(variant, minutes, inc, rated, min_rating, max_rating));
+    seekGame(variant, minutes, inc, rated, min_rating, max_rating); //use updateRatings()?
+    //getRating(variant, time_control).then(rating => seekGame(variant, minutes, inc, rated, min_rating, max_rating));
   }
 }
 
 function seekGame(variant,minutes,inc,rated,min_rating,max_rating) {  //console.log("Rating: " + rating);
-  let body_text = "variant=" + variant + "&rated=" + rated + "&time=" + minutes + "&increment=" + inc; // + "&ratingRange=" + min_rating + "-" + max_rating;
+  let body_text = "variant=" + variant + "&rated=" + rated + "&time=" + minutes + "&increment=" + inc +
+    "&ratingRange=" + min_rating + "-" + max_rating;
   console.log("Seeking: " + body_text);
   seek_controller = new AbortController();
   seek_signal = seek_controller.signal;

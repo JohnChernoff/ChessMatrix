@@ -6,7 +6,7 @@ function registerButton(button) {
 
 function mouseDown(event,button) {
   button.changing = true;
-  if (button !== null) animateChange(button,event.button === 0 ? button.increment : -button.increment);
+  animateChange(button,event.button === 0 ? button.increment : -button.increment);
 }
 
 function mouseUp(event,button) { //console.log("Mouse up: " + butt);
