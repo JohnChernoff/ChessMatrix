@@ -14,7 +14,7 @@ let background_color = "black";
 let from_click = null, to_click = null;
 let status_percent = 10;
 let board_queue = [];
-let anim_test = true;
+let anim_test = false;
 
 for (let i=0; i<6; i++) {
   piece_imgs[i] = { black: new Image(), white: new Image() }; //onload?
@@ -155,20 +155,18 @@ function drawBoard(board) {
   }
   else if (unfitted) fitBoardsToScreen();
   let board_dim = getBoardDim(board);
-
   if (board.result !== ResultEnum.ONGOING) {  //console.log("Animating: " + getBoardNumber(board));
     animateBoard(board,board_dim);
     if (!board.fin) board_queue.push(board);
     return;
   }
-
   calculateColorControl(board);
-
   if (chk_shade.checked) linearInterpolateBoard(board.matrix,board_dim);
   drawSquares(board.matrix,board_dim,!chk_shade.checked,chk_pieces.checked,chk_control.checked,true);
-  drawMoveArrow(board,board_dim);
   drawStatus(board,board_dim);
-  //ctx.strokeStyle = "rgb(24,24,24)"; ctx.strokeRect(board_x,board_y,board_width,board_height);
+  let move = getMoveInfo(board); //console.log(board.last_move + " : " + JSON.stringify(move));
+  drawMoveArrow(move,board.black_pov,board_dim);
+  playMove(move);
 }
 
 function calculateColorControl(board) {
@@ -180,10 +178,30 @@ function calculateColorControl(board) {
   }
 }
 
-function drawMoveArrow(board,board_dim) {
-  let move = getMoveCoords(board.last_move); //console.log(move);
+function playMove(move) {
   if (move !== null) {
-    if (board.black_pov) {
+    let fromPitch = 24 + (move.from.y * 8) + move.from.x;
+    let toPitch = 24 + (move.to.y * 8) + move.to.x;
+    let mv2 = max_volume/2;
+    if (move.castling) {
+      playNote(orchestra[CASTLING],0,fromPitch,1,mv2);
+      playNote(orchestra[CASTLING],0,60,1,mv2);
+    }
+    else if (move.capture) {
+      let volume = mv2; // / (7 - Math.abs(move.piece));
+      playNote(orchestra[CAPTURE],0,fromPitch,1,volume);
+      playNote(orchestra[CAPTURE],0,toPitch,1,volume);
+    }
+    else {
+      let d = 8 / (7 - Math.abs(move.piece));
+      addNoteToQueue(orchestra[MOVE],toPitch,d,mv2)
+    }
+  }
+}
+
+function drawMoveArrow(move,black_pov,board_dim) {
+  if (move !== null) {
+    if (black_pov) {
       move.from.x = 7 - move.from.x;  move.from.y = 7 - move.from.y;  move.to.x = 7 - move.to.x;  move.to.y = 7 - move.to.y;
     }
     let x1 = board_dim.board_x + (move.from.x * board_dim.square_width) + (board_dim.square_width/2)
@@ -227,7 +245,6 @@ function drawStatus(board,board_dim) {
   ctx.fillStyle = "black";
   ctx.font = 'bold ' + (board_dim.sz2/1.5) + 'px fixedsys'; let fontpad = board_dim.sz2/4;
   let top_y = board_dim.board_y - fontpad, bottom_y = (board_dim.board_y + board_dim.sz2 + board_dim.board_height) - fontpad;
-  //if (playing) console.log(JSON.stringify(board.info));
   let pfx = getWinPrefix(board);
   let black_txt = pfx.black + info.black.name + "(" + info.black.rating + ") : " + sec2hms(board.clock.black,info.initial_time);
   let white_txt = pfx.white + info.white.name + "(" + info.white.rating + ") : " + sec2hms(board.clock.white,info.initial_time);
@@ -235,7 +252,7 @@ function drawStatus(board,board_dim) {
   ctx.fillText(white_txt, board_dim.board_x + centerText(white_txt,board_dim.board_width),board.black_pov ? top_y : bottom_y);
 }
 
-function drawSquares(matrix,board_dim,blocks,pieces,control,grid) { //console.log(board_dim);
+function drawSquares(matrix,board_dim,blocks,pieces,control,grid) {
   let piece_width = board_dim.square_width/2, piece_height = board_dim.square_height/2;
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
@@ -275,18 +292,42 @@ function getAlgebraic(x,y) {
   return String.fromCharCode(('a'.charCodeAt(0) + x)) + "" + (y+1);
 }
 
-function getMoveCoords(move) {
-  if (move !== "O-O" && move !== "O-O-O") {
+function getMoveInfo(board) { //console.log(board.last_move);
+  let lastPosition = board.history[board.history.length-2];
+  if (board.last_move.length > 0) {
+    let from = {
+      x: (board.last_move.charCodeAt(0) - 'a'.charCodeAt(0)),
+      y: (8 - (board.last_move.charCodeAt(1) - '0'.charCodeAt(0)))
+    };
+    let to = {
+      x: (board.last_move.charCodeAt(2) - 'a'.charCodeAt(0)),
+      y: (8 - (board.last_move.charCodeAt(3) - '0'.charCodeAt(0)))
+    };
+    let piece = board.black_pov ? board.matrix[7-to.y][7-to.x].piece : board.matrix[to.y][to.x].piece;
+    let captured_piece = board.black_pov ? lastPosition[7-to.y][7-to.x].piece : lastPosition[to.y][to.x].piece;
+    //console.log("Captured: " + captured_piece);
     return {
-      from: {
-        x: move.charCodeAt(0) - 'a'.charCodeAt(0), y: 8 - (move.charCodeAt(1) - '0'.charCodeAt(0))
-      },
-      to: {
-        x: move.charCodeAt(2) - 'a'.charCodeAt(0), y: 8 - (move.charCodeAt(3) - '0'.charCodeAt(0))
-      }
+      from: from,
+      to: to,
+      capture: captured_piece !== 0,
+      castling: (piece === 0),
+      check: false, //TODO: add check/checkmate code
+      checkmate: false,
+      piece: piece
     }
   }
   else return null;
+}
+
+function matrix2str(matrix) {
+  let str = "";
+  for (let y=0;y<8;y++) {
+    str += "\n";
+    for (let x=0;x<8;x++) {
+      str += " " + PIECE_CHRS[matrix[x][y].piece + 6];
+    }
+  }
+  return str;
 }
 
 function centerText(text, maxWidth) {

@@ -103,11 +103,13 @@ function newBoard(data,playing,black_pov,timer) {
     for (let i=0;i<moves.length;i++) game.move(moves[i]);
     fen = game.fen();
   }
+  let matrix = initMatrix(fen,black_pov);
+  let history = []; history.push(matrix);
   let board = {
     playing : playing, black_pov : black_pov, fin : false,
-    matrix : initMatrix(fen,black_pov), canvas_loc : { x : 0, y : 0 },
+    matrix : matrix, canvas_loc : { x : 0, y : 0 },
     turn: fen.split(" ")[1], last_move : "", clock : { white: 0, black: 0 },
-    result : ResultEnum.ONGOING, info : data
+    result : ResultEnum.ONGOING, info : data, history : history
   };
   board.timer = timer === undefined ? setInterval(nextGameTick,1000,board): timer;
   return board;
@@ -206,6 +208,7 @@ function newObservation(e) {
       if (playing ? play_board.info.id === data.d.id : board !== null) {
         if (data.t === "fen" && board.result === ResultEnum.ONGOING) {
           board.matrix = initMatrix(data.d.fen,board.black_pov);
+          board.history.push(board.matrix);
           board.last_move = data.d.lm;
           board.clock = { white : data.d.wc, black : data.d.bc };
           board.turn = data.d.fen.split(" ")[1];

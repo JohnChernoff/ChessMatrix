@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="css/main.css">
 
   <meta name="theme-color" content="#fafafa">
+
 </head>
 
 <body onload="main()" onresize="resize()">
@@ -42,13 +43,14 @@
     <label for="range_games">Games</label>
     <input type="range" min="1" max="30" value="8" step="1" class="slider" id="range_games" onchange="setBoards()">
     <label for="chkShade">Shading</label>
-    <input type="checkbox" id="chkShade" onchange="drawBoards()" checked="true">
+    <input type="checkbox" id="chkShade" onchange="drawBoards()" checked>
     <label for="chkPieces">Show Pieces</label>
-    <input type="checkbox" id="chkPieces" onchange="drawBoards()" checked="true">
+    <input type="checkbox" id="chkPieces" onchange="drawBoards()" checked>
     <label for="chkControl">Show Control</label>
     <input type="checkbox" id="chkControl" onchange="drawBoards()">
     <button id="drawButt" class="play_cmds" onclick="offerDraw()"> Draw </button>
     <button id="resignButt" class="play_cmds" onclick="resign()"> Resign </button>
+    <button id="instButt" onclick="document.getElementById('modal-midi-overlay').style.display='block'">Audio</button>
     <button hidden id = "hodgeVar1Butt" class = "range_butt">2</button>
     <button hidden id = "hodgeVar2Butt" class = "range_butt">3</button>
     <button hidden id = "hodgeVar3Butt" class = "range_butt">16</button>
@@ -57,6 +59,17 @@
 
   <div id="boards">
     <canvas id="main_canvas"></canvas>
+  </div>
+
+  <div id="modal-midi-overlay" class="modal_overlays">
+    <div id="modal-midi-wrap" class="modal_boxes">
+      <span class="close" onclick="document.getElementById('modal-midi-overlay').style.display='none'">&times;</span>
+      <label for="chkMute">Mute Audio</label>
+      <input type="checkbox" id="chkMute" onchange="setMute(this.checked)" checked>
+      <label for="range_tempo"> Tempo </label>
+      <input type="range" min="1" max="100" value="25" step="1" class="slider" id="range_tempo" onchange="setTempo(this.valueAsNumber)" >
+      <h2>Instruments:</h2>
+    </div>
   </div>
 
   <div id="modal-seeking-overlay" class="modal_overlays">
@@ -109,16 +122,16 @@
   </div>
 
   <script src="js/vendor/modernizr-3.11.2.min.js"></script>
+  <script src="js/vendor/WebAudioFontPlayer.js"></script>
   <script src="js/vendor/chess.js"></script>
   <script src="js/plugins.js"></script>
+  <script src="js/sonification.js"></script>
   <script src="js/zug_button.js"></script>
   <script src="js/Animations.js"></script>
   <script src="js/chess_matrix.js"></script>
   <script src="js/main.js"></script>
   <script src="js/lichess.js"></script>
   <script src="js/canvas.js"></script>
-
-
 
 <!-- Google Analytics: change UA-XXXXX-Y to be your site's ID. -->
   <script>

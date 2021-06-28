@@ -1,9 +1,8 @@
 /* TODO:
-    weird bugs/animation catchups from tabbing away or lichess socket closing
+    weird bugs/animation/audio catchups from tabbing away or lichess socket closing
     drag-move
     flip board, accept draw, chat
     move histories
-    musical events (board = instrument, square = pitch)
     help of some sort
 */
 
@@ -12,6 +11,11 @@ hodge_var1_butt_obj,hodge_var2_butt_obj,hodge_var3_butt_obj;
 
 //console.log(getCookie("oauth"));
 function main() {
+
+  initAudio("modal-midi-wrap");
+  setMute(document.getElementById("chkMute").checked);
+  setTempo(document.getElementById("range_tempo").valueAsNumber);
+  melodizer();
 
   time_range_butt_obj = new RangeButton(document.getElementById("timeRangeButt"),0,60,5,1,250,updateRatings);
   registerButton(time_range_butt_obj);
