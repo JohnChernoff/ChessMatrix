@@ -6,7 +6,7 @@ const INSTRUMENTS = [INST_MELODY,INST_HARMONY,INST_CAPTURE,INST_CASTLING,INST_CH
 const MIDI_DEFAULTS = [1,73,45,116,1];
 const orchestra = [];
 let muted = true;
-let max_volume = .1;
+let max_volume = .75;
 let tempo = .4;
 let note_queue = [];
 
@@ -77,7 +77,8 @@ function loadInstrument(type) {
 
 function playNote(i,t,p,d,v) {
   if (!muted) {
-    return player.queueWaveTable(audioContext, audioContext.destination, i,t,p,tempo * d,v);
+    return player.queueWaveTable(audioContext, audioContext.destination, i,t,p,tempo * d,
+      v > max_volume ? max_volume : v);
   }
   else return null;
 }
