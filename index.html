@@ -65,9 +65,9 @@
     <div id="modal-midi-wrap" class="modal_boxes">
       <span class="close" onclick="document.getElementById('modal-midi-overlay').style.display='none'">&times;</span>
       <label for="chkMute">Mute Audio</label>
-      <input type="checkbox" id="chkMute" onchange="setMute(this.checked)" checked>
+      <input type="checkbox" id="chkMute" onchange="setMute(this.checked)" checked> <br>
       <label for="range_tempo"> Tempo </label>
-      <input type="range" min="1" max="100" value="25" step="1" class="slider" id="range_tempo" onchange="setTempo(this.valueAsNumber)" >
+      <input type="range" min="5" max="100" value="25" step="1" class="slider" id="range_tempo" onchange="setTempo(this.valueAsNumber)" >
       <h2>Instruments:</h2>
     </div>
   </div>
@@ -129,9 +129,9 @@
   <script src="js/zug_button.js"></script>
   <script src="js/Animations.js"></script>
   <script src="js/chess_matrix.js"></script>
-  <script src="js/main.js"></script>
   <script src="js/lichess.js"></script>
   <script src="js/canvas.js"></script>
+  <script src="js/main.js"></script>
 
 <!-- Google Analytics: change UA-XXXXX-Y to be your site's ID. -->
   <script>
