@@ -12,23 +12,27 @@ hodge_var1_butt_obj,hodge_var2_butt_obj,hodge_var3_butt_obj;
 const INST_MELODY = "Move Melody", INST_RHYTHM = "Move Rhythm (Real Time)", INST_CAPTURE = "Capture (Harmony)", INST_CASTLING = "Castling", INST_CHECK = "Check";
 const INSTRUMENTS = [INST_MELODY,INST_RHYTHM,INST_CAPTURE,INST_CASTLING,INST_CHECK];
 const ENSEMBLES = [
-  { patches: [73,113,0,45,116],levels: [48,24,24,50,50] },
+  { patches: [27,98,4,52,45], levels: [50,0,50,0,50] },
+  { patches: [73,118,0,45,116],levels: [48,16,20,50,50] },
   { patches: [70,45,8,45,116], levels: [48,12,16,50,50] },
-  { patches: [27,115,15,45,116], levels: [48,16,12,50,50] },
   { patches: [41,108,28,45,116], levels: [36,24,16,50,50] },
   { patches: [0,0,0,45,116],   levels: [36,24,24,50,50] },
 ];
+const DRUMS = [35,40,42,51,50,48,41,19];
 const OCTAVE = 12;
 const MAX_PITCH = OCTAVE * 7, MIN_PITCH = OCTAVE * 2;
 const TEMPO_CONTROL = document.getElementById("range_tempo");
+let drum_board = 0;
 
 //console.log(getCookie("oauth"));
 function main() {
 
   initAudio("modal-midi-wrap",INSTRUMENTS,ENSEMBLES[0]);
   setMute(document.getElementById("chkMute").checked);
-  setTempo(document.getElementById("range_tempo").valueAsNumber);
+  setTempo(TEMPO_CONTROL.valueAsNumber);
+  setDrumKit(DRUMS);
   melodizer();
+  drumBeat();
 
   time_range_butt_obj = new RangeButton(document.getElementById("timeRangeButt"),0,60,5,1,250,updateRatings);
   registerButton(time_range_butt_obj);
@@ -56,9 +60,16 @@ function main() {
   runLichessSocket();
 }
 
-function setRandomEnsemble() {
+function newPhase(board) {
+  drum_board = getBoardNumber(board); setRandomTempo();
+}
+
+function setRandomEnsemble() { //setRandomTempo();
   let ensemble = ENSEMBLES[Math.floor(Math.random() * ENSEMBLES.length)]; //console.log("Randomizing..." + JSON.stringify(ensemble));
   for (let i=0;i<ensemble.patches.length;i++) setInstrument(INSTRUMENTS[i],ensemble.patches[i],ensemble.levels[i]);
+}
+
+function setRandomTempo() {
   let t = 5 + Math.random() * 36; TEMPO_CONTROL.value = t; setTempo(t);
 }
 
@@ -117,14 +128,12 @@ function padify(se, mi, hr, dy) {
 
 function playMove(move,black_pov) {
   if (move !== null) {
-    let fromPitch = MIN_PITCH + (move.from.y * 8) + move.from.x;
     let toPitch = MIN_PITCH + (move.to.y * 8) + move.to.x;
     let chord = [24 + move.from.x,36 + move.from.y,48 + move.to.x,60 + move.to.y];
     let volume = .25;
     let dist =  calcMoveDist(move);
     if (move.type === INST_CAPTURE || move.type === INST_CASTLING) {
-      //playNote(orchestra[move.type],0,fromPitch,1,volume);
-      //playNote(orchestra[move.type],0,toPitch,1,volume);
+      playChord(INST_CASTLING,0,chord,8,volume);
       addChordToQueue(move.type,chord,8,volume);
       let extreme = 0;
       for (let p=0;p<Math.abs(move.piece);p++) {
@@ -146,7 +155,7 @@ function playMove(move,black_pov) {
       let interval = Math.round(((dist-1)/6) * OCTAVE) + (move.from.x - move.from.y);
       let last_interval = melody.patterns.length > 0 ? melody.patterns[melody.patterns.length-1].interval : 0;
       let dir = move.from.y - move.to.y; let up = move.piece < 0 ? dir < 0 :  dir > 0; if (black_pov) up = !up; //sideways = down
-      let reversal = (Math.random() * last_interval) > 2; //let undertow = (Math.random() * 144) < (melody.pitch - 24);
+      let reversal = (Math.random() * last_interval) > 2;
       if (!up || reversal) interval = -interval;
       melody.pitch += interval;
       if (melody.pitch > MAX_PITCH) melody.pitch = MAX_PITCH;
@@ -154,8 +163,7 @@ function playMove(move,black_pov) {
       else {
         melody.patterns.push({ rhythm: dur, interval: interval});
         if (melody.patterns.length > 24) melody.patterns.shift();
-      }
-      console.log(melody);
+      } //console.log(melody);
       //addNoteToQueue(orchestra[INST_MELODY],melody.pitch,dur,volume); //console.log(Math.abs(move.piece) + " -> " + d);
       playNote(INST_RHYTHM,0,toPitch,8,volume);
     }
@@ -167,4 +175,26 @@ function octaveCheck(pitch,interval) {
   let new_octave = Math.floor((pitch + interval) / OCTAVE);
   let correction = ((octave-new_octave) * OCTAVE); //console.log(pitch + "," + interval + ", " + "Correction: " + correction);
   return correction + (pitch + interval);
+}
+
+function drumBeat() {
+  let t = (drum_board < board_list.length) ? drumBoard(board_list[drum_board],0) : 1000; //console.log("Waiting: " + t);
+  setTimeout(drumBeat,t);
+}
+
+function drumBoard(board,start_time) { //console.log("Drumming: " + JSON.stringify(board.matrix));
+  let drum_txt = "", eighth_note_duration = 120; //TEMPO_CONTROL.valueAsNumber * 5;
+  calculateColorControl(board);
+  let control = 0, previous_control;
+  for (let drum = 0; drum < 8; drum++) {
+    previous_control = 0;
+    for (let beat = 0; beat < 8; beat++ ) {
+      control = Math.abs(board.matrix[beat][drum].control); drum_txt += control;
+      let t = beat * eighth_note_duration;
+      if (control > 2) playDrum(drum,(start_time + t)/1000,eighth_note_duration/1000,.1);
+    }
+    drum_txt += "\n"; previous_control = control;
+  }
+  console.log(drum_txt);
+  return eighth_note_duration * 8;
 }

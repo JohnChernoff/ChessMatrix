@@ -1,11 +1,10 @@
 const AudioContextFunc = window.AudioContext || window.webkitAudioContext;
 let audioContext = new AudioContextFunc();
 const audio_player = new WebAudioFontPlayer();
-const orchestra = [];
+const orchestra = [], drum_kit = [], DRUM_FLAG = -1;
 let players;
 let muted = true;
-let max_volume = .75;
-let tempo = .4;
+let max_volume = .75, tempo = .4;
 let note_queue = [];
 
 function setTempo(t) { tempo = t/100; console.log("Tempo: " + tempo); }
@@ -41,10 +40,8 @@ function createMIDISelection(type,element_id) {
   label_inst.htmlFor = sel.id;
   label_inst.textContent = "Timbre: " + type;
   let div = document.getElementById(element_id);
-  div.appendChild(label_inst);
-  div.appendChild(document.createElement("br"));
-  div.appendChild(sel);
-  div.appendChild(document.createElement("br"));
+  div.appendChild(label_inst); div.appendChild(document.createElement("br"));
+  div.appendChild(sel); div.appendChild(document.createElement("br"));
   let range_vol = document.createElement("input");
   range_vol.id = "range_vol_" + type;
   range_vol.type = 'range';
@@ -72,24 +69,45 @@ function setInstrument(type,patch,level) { //console.log("Setting: " + type + ",
   audio_player.loader.waitLoad(function () { orchestra[type] = window[info.variable]; });
 }
 
+function setDrumKit(set) {
+  for (let i=0;i<set.length;i++) {
+    let info = audio_player.loader.drumInfo(set[i]);
+    console.log(JSON.stringify(info));
+    audio_player.loader.startLoad(audioContext, info.url, info.variable);
+    audio_player.loader.waitLoad(function () {
+      drum_kit[i] = { pitch: info.pitch, preset: window[info.variable] };
+    });
+  }
+}
+
 function playNote(i,t,p,d,v) {
-  let volume = v * (getVolumeControl(i).valueAsNumber/100);
-  let mute = getMuteControl(i).checked;
+  let volume = v * (getVolumeControl(i).valueAsNumber/100), mute = getMuteControl(i).checked;
   if (!muted && !mute && volume > 0) {
-    return audio_player.queueWaveTable(audioContext, audioContext.destination, orchestra[i],t,p,tempo * d,
-      volume > max_volume ? max_volume : volume);
+    return audio_player.queueWaveTable(audioContext, audioContext.destination, orchestra[i],
+      audioContext.currentTime + t, p,tempo * d,volume > max_volume ? max_volume : volume);
   }
   else return null;
 }
 
-function addChordToQueue(i,pitches,d,v) {
-  note_queue.push({ instrument: i, pitches: pitches, duration: d * 1000, volume: v });
+function playChord(i,t,pitches,d,v) {
+  let volume = v * (getVolumeControl(i).valueAsNumber/100), mute = getMuteControl(i).checked;
+  if (!muted && !mute && volume > 0) {
+    return audio_player.queueChord(audioContext, audioContext.destination, orchestra[i],
+      audioContext.currentTime + t, pitches,tempo * d,volume > max_volume ? max_volume : volume);
+  }
+  else return null;
 }
 
-function addNoteToQueue(i,p,d,v) {
-  note_queue.push({ instrument: i, pitches: [p], duration: d * 1000, volume: v });
+function playDrum(i,t,d,v) {
+  if (!muted) {
+    return audio_player.queueWaveTable(audioContext, audioContext.destination,drum_kit[i].preset,
+      audioContext.currentTime + t,drum_kit[i].pitch,1,v > max_volume ? max_volume : v);
+  }
+  else return null;
 }
 
+function addChordToQueue(i,pitches,d,v) { note_queue.push({ instrument: i, pitches: pitches, duration: d * 1000, volume: v }); }
+function addNoteToQueue(i,p,d,v) { note_queue.push({ instrument: i, pitches: [p], duration: d * 1000, volume: v }); }
 function melodizer() {
   if (note_queue.length > 0) {
     let note = note_queue.pop(); //console.log("waiting: " + (tempo * note.duration));

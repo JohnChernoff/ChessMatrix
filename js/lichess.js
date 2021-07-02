@@ -96,6 +96,10 @@ function clearBoard(board) {
   clearInterval(board.timer); board.fin = true;
 }
 
+function resetBoard(board) {
+  clearBoard(board); setBoards();
+}
+
 function newBoard(data,playing,black_pov,timer) {
   let fen = START_FEN;
   if (data.moves !== undefined) {
@@ -214,7 +218,15 @@ function newObservation(e) {
           board.turn = data.d.fen.split(" ")[1];
           board_queue.push(snapshot(board));
         }
-        else if (data.t === "finish") setResult(data,board);
+        else if (data.t === "finish") {
+          if (muted) { //no sound = animation
+            setResult(data,board);
+          }
+          else {
+            newPhase(board);
+            resetBoard(board);
+          }
+        }
       }
     }
   }

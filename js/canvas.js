@@ -50,9 +50,7 @@ canvas.addEventListener("mousedown", event => {
       if (anim_test) {
         board.result = ResultEnum.DRAW; board_queue.push(board);
       }
-      else {
-        clearBoard(board); setBoards(); setRandomEnsemble();
-      }
+      else resetBoard();
     }
   }
 });
@@ -171,6 +169,7 @@ function drawBoard(board) {
 }
 
 function calculateColorControl(board) {
+  console.log("Updating Control for board: " + board);
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       board.matrix[rank][file].control = getControl(rank,file,board);
